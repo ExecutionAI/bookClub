@@ -65,7 +65,7 @@ tailwind.config = {
 
 <script>
 const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
-  ? 'http://localhost:3001' : 'https://bookclub-api.onrender.com';
+  ? 'http://localhost:3001' : 'https://bookclub-api-u4og.onrender.com';
 const token = localStorage.getItem('bcToken');
 const me = (() => { try { return JSON.parse(localStorage.getItem('bcMember')); } catch { return null; } })();
 if (!token) location.href = 'login.html';

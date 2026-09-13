@@ -170,7 +170,7 @@ tailwind.config = {
 
 <script>
 const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
-  ? 'http://localhost:3001' : 'https://bookclub-api.onrender.com';
+  ? 'http://localhost:3001' : 'https://bookclub-api-u4og.onrender.com';
 let adminToken = localStorage.getItem('adminToken') || '';
 
 function esc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
