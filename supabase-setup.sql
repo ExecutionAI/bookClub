@@ -139,9 +139,25 @@ CREATE TRIGGER ratings_updated_at
   BEFORE UPDATE ON bookclub.ratings
   FOR EACH ROW EXECUTE FUNCTION bookclub.set_updated_at();
 
--- 10. Grants
-GRANT USAGE ON SCHEMA bookclub TO anon, authenticated, service_role;
-GRANT ALL ON ALL TABLES IN SCHEMA bookclub TO anon, authenticated, service_role;
-GRANT ALL ON ALL SEQUENCES IN SCHEMA bookclub TO anon, authenticated, service_role;
-ALTER DEFAULT PRIVILEGES IN SCHEMA bookclub GRANT ALL ON TABLES TO anon, authenticated, service_role;
-ALTER DEFAULT PRIVILEGES IN SCHEMA bookclub GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
+-- 10. Grants — service_role only. The browser never talks to Supabase directly;
+-- everything goes through api.mjs with the service key. anon/authenticated get
+-- nothing (defense in depth alongside RLS below).
+GRANT USAGE ON SCHEMA bookclub TO service_role;
+GRANT ALL ON ALL TABLES IN SCHEMA bookclub TO service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA bookclub TO service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA bookclub GRANT ALL ON TABLES TO service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA bookclub GRANT ALL ON SEQUENCES TO service_role;
+REVOKE ALL ON ALL TABLES IN SCHEMA bookclub FROM anon, authenticated;
+REVOKE USAGE ON SCHEMA bookclub FROM anon, authenticated;
+
+-- 11. RLS — enabled with NO policies = deny-all for anon/authenticated.
+-- service_role bypasses RLS, so api.mjs is unaffected. This protects the schema
+-- even if the shared Lab project's anon key leaks via a sibling app.
+ALTER TABLE bookclub.members     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bookclub.sessions    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bookclub.books       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bookclub.events      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bookclub.suggestions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bookclub.votes       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bookclub.ratings     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bookclub.attendance  ENABLE ROW LEVEL SECURITY;
