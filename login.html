@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Entrar — Entre bicis y libros</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: { extend: {
+    colors: {
+      noche: { DEFAULT:'#1e1533', deep:'#150e24', surface:'#2a1f47', line:'#3d2f61' },
+      crema: { DEFAULT:'#f7f0e6', dim:'#b5a9cf' },
+      marigold: '#d9a441',
+      orquidea: '#c9679a',
+      caliz: '#f5c96b',
+    },
+    fontFamily: { display:['Fraunces','Georgia','serif'], body:['Karla','system-ui','sans-serif'] },
+  }}
+};
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Karla:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
+<style>
+  body { font-family:'Karla',system-ui,sans-serif; }
+  .font-display { font-family:'Fraunces',Georgia,serif; }
+  /* film grain over the night */
+  .grain::before {
+    content:''; position:fixed; inset:0; pointer-events:none; z-index:50; opacity:.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  }
+  .sombra { box-shadow: 0 1px 2px rgba(10,6,20,.55), 0 10px 30px -10px rgba(10,6,20,.7), 0 24px 60px -20px rgba(217,164,65,.08); }
+  :focus-visible { outline:2px solid #d9a441; outline-offset:2px; border-radius:4px; }
+  button { -webkit-tap-highlight-color:transparent; }
+  .member-card:hover .member-avatar { transform:translateY(-3px) rotate(-2deg); }
+  .member-avatar { transition:transform .25s cubic-bezier(.34,1.56,.64,1); }
+  .pin-key { transition:transform .12s ease, background-color .15s ease; }
+  .pin-key:hover { background-color:#352858; }
+  .pin-key:active { transform:scale(.93); }
+  @keyframes drift { 0%,100% { transform:translateY(0) rotate(var(--rot)); } 50% { transform:translateY(-10px) rotate(calc(var(--rot) * -1)); } }
+  .papelito { animation: drift 7s ease-in-out infinite; }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-8px)} 75%{transform:translateX(8px)} }
+  .shake { animation:shake .3s ease 2; }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none!important; transition:none!important; } }
+</style>
+</head>
+<body class="grain bg-noche-deep text-crema min-h-screen flex flex-col items-center justify-center px-6 py-12 overflow-hidden">
+
+  <!-- drifting paper scraps in the background -->
+  <div aria-hidden="true" class="fixed inset-0 pointer-events-none">
+    <div class="papelito absolute top-[12%] left-[8%] w-10 h-7 bg-crema/10 rounded-sm" style="--rot:-6deg"></div>
+    <div class="papelito absolute top-[20%] right-[12%] w-8 h-6 bg-marigold/10 rounded-sm" style="--rot:8deg; animation-delay:-2s"></div>
+    <div class="papelito absolute bottom-[18%] left-[15%] w-9 h-6 bg-caliz/10 rounded-sm" style="--rot:4deg; animation-delay:-4s"></div>
+    <div class="papelito absolute bottom-[25%] right-[9%] w-7 h-5 bg-crema/10 rounded-sm" style="--rot:-9deg; animation-delay:-1s"></div>
+  </div>
+
+  <header class="text-center mb-10 relative">
+    <p class="uppercase tracking-[0.3em] text-xs text-crema-dim mb-3">Ámsterdam · desde 2024</p>
+    <svg class="w-9 h-9 mx-auto mb-4 text-marigold" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6L5.6 18.4" opacity=".55"/></svg>
+    <h1 class="font-display text-5xl sm:text-6xl font-semibold" style="font-variation-settings:'opsz' 100;">
+      Entre bicis <em class="text-marigold not-italic font-display italic">y libros</em>
+    </h1>
+    <p class="mt-3 text-crema-dim italic font-display">lectoras latinas pedaleando historias entre canales</p>
+  </header>
+
+  <!-- Step 1: pick your name -->
+  <section id="step-members" class="w-full max-w-md relative">
+    <h2 class="text-center text-sm uppercase tracking-[0.2em] text-crema-dim mb-5">¿Quién eres?</h2>
+    <div id="member-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      <p class="col-span-full text-center text-crema-dim py-8">Cargando…</p>
+    </div>
+  </section>
+
+  <!-- Step 2: PIN -->
+  <section id="step-pin" class="hidden w-full max-w-xs relative text-center">
+    <button id="back-btn" class="text-crema-dim text-sm hover:text-crema mb-4 inline-flex items-center gap-1">← cambiar de persona</button>
+    <div class="mb-5">
+      <div id="pin-avatar" class="w-16 h-16 mx-auto rounded-full flex items-center justify-center font-display text-2xl font-semibold text-noche-deep mb-2"></div>
+      <p id="pin-name" class="font-display text-xl"></p>
+      <p class="text-crema-dim text-sm mt-1">Escribe tu PIN</p>
+    </div>
+    <div id="pin-dots" class="flex justify-center gap-3 mb-6 h-4" aria-live="polite"></div>
+    <p id="pin-error" class="hidden text-orquidea text-sm mb-4"></p>
+    <div class="grid grid-cols-3 gap-3">
+      <!-- keypad injected -->
+    </div>
+  </section>
+
+<script>
+const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+  ? 'http://localhost:3001' : 'https://bookclub-api.onrender.com';
+
+if (localStorage.getItem('bcToken')) location.href = 'index.html';
+
+function esc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+let selected = null;
+let pin = '';
+
+async function loadMembers(){
+  const grid = document.getElementById('member-grid');
+  try {
+    const res = await fetch(`${API_BASE}/api/members`);
+    const members = await res.json();
+    if (!members.length) { grid.innerHTML = '<p class="col-span-full text-center text-crema-dim py-8">Aún no hay miembros. Habla con Paola ✨</p>'; return; }
+    grid.innerHTML = members.map(m => `
+      <button class="member-card group bg-noche-surface sombra rounded-2xl p-4 flex flex-col items-center gap-2 border border-noche-line hover:border-marigold/50 active:scale-[.97] transition-colors"
+              data-id="${m.id}" data-name="${esc(m.name)}" data-color="${esc(m.avatar_color || '#d9a441')}">
+        <span class="member-avatar w-12 h-12 rounded-full flex items-center justify-center font-display text-xl font-semibold text-noche-deep" style="background:${esc(m.avatar_color || '#d9a441')}">${esc(m.name[0])}</span>
+        <span class="text-sm">${esc(m.name)}</span>
+      </button>`).join('');
+    grid.querySelectorAll('button').forEach(b => b.addEventListener('click', () => pickMember(b)));
+  } catch {
+    grid.innerHTML = '<p class="col-span-full text-center text-orquidea py-8">No se pudo conectar. ¿Está el servidor encendido?</p>';
+  }
+}
+
+function pickMember(btn){
+  selected = { id: btn.dataset.id, name: btn.dataset.name, color: btn.dataset.color };
+  pin = '';
+  document.getElementById('step-members').classList.add('hidden');
+  document.getElementById('step-pin').classList.remove('hidden');
+  const av = document.getElementById('pin-avatar');
+  av.textContent = selected.name[0];
+  av.style.background = selected.color;
+  document.getElementById('pin-name').textContent = selected.name;
+  document.getElementById('pin-error').classList.add('hidden');
+  renderDots();
+  renderKeypad();
+}
+
+document.getElementById('back-btn').addEventListener('click', () => {
+  document.getElementById('step-pin').classList.add('hidden');
+  document.getElementById('step-members').classList.remove('hidden');
+});
+
+function renderDots(){
+  const dots = document.getElementById('pin-dots');
+  dots.innerHTML = Array.from({length: Math.max(pin.length, 4)}, (_, i) =>
+    `<span class="w-3 h-3 rounded-full ${i < pin.length ? 'bg-marigold' : 'bg-noche-line'}"></span>`).join('');
+}
+
+function renderKeypad(){
+  const pad = document.querySelector('#step-pin .grid');
+  const keys = ['1','2','3','4','5','6','7','8','9','borrar','0','entrar'];
+  pad.innerHTML = keys.map(k => {
+    if (k === 'borrar') return `<button data-key="del" class="pin-key h-16 rounded-2xl bg-noche-surface border border-noche-line text-crema-dim text-sm">borrar</button>`;
+    if (k === 'entrar') return `<button data-key="ok" class="pin-key h-16 rounded-2xl bg-marigold text-noche-deep font-bold text-sm">entrar</button>`;
+    return `<button data-key="${k}" class="pin-key h-16 rounded-2xl bg-noche-surface border border-noche-line font-display text-2xl">${k}</button>`;
+  }).join('');
+  pad.querySelectorAll('button').forEach(b => b.addEventListener('click', () => pressKey(b.dataset.key)));
+}
+
+async function pressKey(k){
+  const err = document.getElementById('pin-error');
+  err.classList.add('hidden');
+  if (k === 'del') { pin = pin.slice(0, -1); renderDots(); return; }
+  if (k === 'ok') { return submit(); }
+  if (pin.length >= 6) return;
+  pin += k;
+  renderDots();
+  if (pin.length === 6) submit();
+}
+
+async function submit(){
+  if (pin.length < 4) return showError('El PIN tiene al menos 4 dígitos');
+  try {
+    const res = await fetch(`${API_BASE}/api/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ member_id: selected.id, pin }),
+    });
+    const data = await res.json();
+    if (!res.ok) return showError(data.error || 'PIN incorrecto');
+    localStorage.setItem('bcToken', data.token);
+    localStorage.setItem('bcMember', JSON.stringify(data.member));
+    location.href = 'index.html';
+  } catch {
+    showError('No se pudo conectar con el servidor');
+  }
+}
+
+function showError(msg){
+  pin = '';
+  renderDots();
+  const err = document.getElementById('pin-error');
+  err.textContent = msg;
+  err.classList.remove('hidden');
+  document.getElementById('pin-dots').classList.add('shake');
+  setTimeout(() => document.getElementById('pin-dots').classList.remove('shake'), 700);
+}
+
+document.addEventListener('keydown', e => {
+  if (document.getElementById('step-pin').classList.contains('hidden')) return;
+  if (/^[0-9]$/.test(e.key)) pressKey(e.key);
+  else if (e.key === 'Backspace') pressKey('del');
+  else if (e.key === 'Enter') pressKey('ok');
+  else if (e.key === 'Escape') document.getElementById('back-btn').click();
+});
+
+loadMembers();
+</script>
+</body>
+</html>

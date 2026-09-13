@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mi perfil — Entre bicis y libros</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: { extend: {
+    colors: {
+      noche: { DEFAULT:'#1e1533', deep:'#150e24', surface:'#2a1f47', line:'#3d2f61' },
+      crema: { DEFAULT:'#f7f0e6', dim:'#b5a9cf' },
+      marigold: '#d9a441',
+      orquidea: '#c9679a',
+      caliz: '#f5c96b',
+    },
+    fontFamily: { display:['Fraunces','Georgia','serif'], body:['Karla','system-ui','sans-serif'] },
+  }}
+};
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Karla:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
+<style>
+  body { font-family:'Karla',system-ui,sans-serif; }
+  .font-display { font-family:'Fraunces',Georgia,serif; }
+  .grain::before {
+    content:''; position:fixed; inset:0; pointer-events:none; z-index:50; opacity:.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  }
+  .sombra { box-shadow: 0 1px 2px rgba(10,6,20,.55), 0 10px 30px -10px rgba(10,6,20,.7), 0 24px 60px -20px rgba(217,164,65,.08); }
+  .sombra-crema { box-shadow: 0 2px 4px rgba(10,6,20,.4), 0 12px 32px -8px rgba(10,6,20,.55), 0 0 0 1px rgba(247,240,230,.06); }
+  :focus-visible { outline:2px solid #d9a441; outline-offset:2px; border-radius:4px; }
+  .cover-wrap { position:relative; overflow:hidden; border-radius:0.5rem; background:#2a1f47; }
+  .cover-wrap::after { content:''; position:absolute; inset:0; background:linear-gradient(160deg, rgba(245,201,107,.12), rgba(30,21,51,.28) 55%, rgba(201,103,154,.18)); mix-blend-mode:multiply; pointer-events:none; }
+  .nav-link { padding:.35rem .7rem; border-radius:9999px; color:#b5a9cf; transition:color .15s ease; }
+  .nav-link:hover { color:#f7f0e6; }
+  .nav-link.active { color:#f7f0e6; background:#2a1f47; }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none!important; transition:none!important; } }
+</style>
+</head>
+<body class="grain bg-noche-deep text-crema min-h-screen">
+
+<nav class="sticky top-0 z-40 bg-noche-deep/85 backdrop-blur border-b border-noche-line">
+  <div class="max-w-5xl mx-auto px-5 h-14 flex items-center justify-between gap-3">
+    <a href="index.html" class="font-display text-lg whitespace-nowrap flex items-center gap-2">
+      <svg class="w-5 h-5 text-marigold shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6L5.6 18.4" opacity=".55"/></svg>
+      Entre bicis <em class="italic text-marigold">y libros</em>
+    </a>
+    <div class="flex items-center gap-1 text-sm overflow-x-auto">
+      <a class="nav-link" href="index.html">Inicio</a>
+      <a class="nav-link" href="biblioteca.html">Biblioteca</a>
+      <a class="nav-link" href="ranking.html">Ranking</a>
+      <a class="nav-link" href="reglas.html">Reglas</a>
+      <a class="nav-link active flex items-center gap-2" href="perfil.html"><span id="nav-avatar" class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-noche-deep" style="background:#d9a441"></span><span class="hidden sm:inline" id="nav-name"></span></a>
+    </div>
+  </div>
+</nav>
+
+<main class="max-w-3xl mx-auto px-5 pb-24">
+  <header class="pt-12 pb-8 flex items-center gap-6">
+    <div id="p-avatar" class="w-20 h-20 rounded-full flex items-center justify-center font-display text-4xl font-semibold text-noche-deep shrink-0" style="background:#d9a441"></div>
+    <div>
+      <h1 id="p-name" class="font-display text-4xl font-semibold"></h1>
+      <p id="p-since" class="text-crema-dim mt-1"></p>
+    </div>
+    <button id="logout" class="ml-auto text-sm text-crema-dim hover:text-orquidea border border-noche-line rounded-xl px-4 py-2">Salir</button>
+  </header>
+
+  <section id="stats" class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-12"></section>
+
+  <section>
+    <div class="flex items-baseline justify-between mb-5">
+      <h2 class="font-display text-2xl sm:text-3xl">Mis libros</h2>
+      <span class="text-xs uppercase tracking-[0.2em] text-crema-dim">notas privadas</span>
+    </div>
+    <div id="my-books" class="space-y-4"><p class="text-crema-dim py-6">Cargando…</p></div>
+  </section>
+</main>
+
+<script>
+const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+  ? 'http://localhost:3001' : 'https://bookclub-api.onrender.com';
+const token = localStorage.getItem('bcToken');
+const me = (() => { try { return JSON.parse(localStorage.getItem('bcMember')); } catch { return null; } })();
+if (!token) location.href = 'login.html';
+
+async function api(path, opts = {}) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...opts,
+    headers: { 'x-member-token': token, 'Content-Type': 'application/json', ...(opts.headers || {}) },
+  });
+  if (res.status === 401) { localStorage.removeItem('bcToken'); localStorage.removeItem('bcMember'); location.href = 'login.html'; throw new Error('401'); }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Error de conexión');
+  return data;
+}
+function esc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
+if (me) {
+  document.getElementById('nav-avatar').textContent = me.name[0];
+  document.getElementById('nav-avatar').style.background = me.avatar_color || '#d9a441';
+  document.getElementById('nav-name').textContent = me.name;
+}
+
+document.getElementById('logout').addEventListener('click', async () => {
+  try { await api('/api/logout', { method: 'POST' }); } catch {}
+  localStorage.removeItem('bcToken');
+  localStorage.removeItem('bcMember');
+  location.href = 'login.html';
+});
+
+async function load(){
+  try {
+    const data = await api('/api/me');
+    const m = data.member;
+
+    document.getElementById('p-avatar').textContent = m.name[0];
+    document.getElementById('p-avatar').style.background = m.avatar_color || '#d9a441';
+    document.getElementById('p-name').textContent = m.name;
+
+    const joined = new Date(m.joined_at);
+    const months = Math.max(0, Math.floor((Date.now() - joined) / (30.44 * 86400000)));
+    const dur = months >= 12
+      ? `${Math.floor(months / 12)} año${Math.floor(months / 12) === 1 ? '' : 's'}${months % 12 ? ` y ${months % 12} mes${months % 12 === 1 ? '' : 'es'}` : ''}`
+      : `${months} mes${months === 1 ? '' : 'es'}`;
+    document.getElementById('p-since').textContent = `miembro desde ${MESES[joined.getMonth()]} de ${joined.getFullYear()} · ${dur} en el club`;
+
+    const s = data.stats;
+    const tile = (num, label) => `
+      <div class="bg-noche-surface border border-noche-line rounded-2xl sombra p-4 text-center">
+        <p class="font-display text-3xl font-semibold text-marigold">${num}</p>
+        <p class="text-xs uppercase tracking-wider text-crema-dim mt-1">${label}</p>
+      </div>`;
+    document.getElementById('stats').innerHTML =
+      tile(s.books_read, 'libros leídos') + tile(s.events_attended, 'encuentros') +
+      tile(s.suggestions, 'propuestas') + tile(s.picked, 'elegidas 🔥');
+
+    const list = document.getElementById('my-books');
+    if (!data.books.length) {
+      list.innerHTML = '<p class="text-crema-dim py-6">Todavía no tienes libros. Tu historia con el club empieza en el próximo encuentro ✨</p>';
+      return;
+    }
+    list.innerHTML = data.books.map(b => `
+      <a href="biblioteca.html?abrir=${b.id}" class="flex gap-4 bg-noche-surface border border-noche-line rounded-2xl sombra p-4 hover:border-marigold/40 transition-colors">
+        <div class="cover-wrap w-16 shrink-0">
+          ${b.cover_url ? `<img src="${esc(b.cover_url)}" alt="" class="w-16 h-24 object-cover" loading="lazy">` : '<div class="w-16 h-24"></div>'}
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <p class="font-semibold leading-snug">${esc(b.title)}</p>
+              <p class="text-sm text-crema-dim">${esc(b.author || '')}</p>
+            </div>
+            ${b.my_score !== null
+              ? `<p class="shrink-0 text-right"><span class="font-display text-2xl font-semibold text-marigold">${b.my_score}</span><span class="text-crema-dim text-xs"> / 10</span></p>`
+              : '<span class="shrink-0 text-xs px-2.5 py-1 rounded-full bg-marigold/15 text-marigold whitespace-nowrap">puntúalo →</span>'}
+          </div>
+          ${b.my_note
+            ? `<p class="mt-2 text-sm text-crema-dim italic border-l-2 border-marigold/40 pl-3 leading-relaxed">"${esc(b.my_note)}"</p>`
+            : '<p class="mt-2 text-xs text-crema-dim/60">sin nota — toca para escribir una</p>'}
+        </div>
+      </a>`).join('');
+  } catch (err) { if (err.message !== '401') console.error(err); }
+}
+load();
+</script>
+</body>
+</html>

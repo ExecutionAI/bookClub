@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ranking — Entre bicis y libros</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: { extend: {
+    colors: {
+      noche: { DEFAULT:'#1e1533', deep:'#150e24', surface:'#2a1f47', line:'#3d2f61' },
+      crema: { DEFAULT:'#f7f0e6', dim:'#b5a9cf' },
+      marigold: '#d9a441',
+      orquidea: '#c9679a',
+      caliz: '#f5c96b',
+    },
+    fontFamily: { display:['Fraunces','Georgia','serif'], body:['Karla','system-ui','sans-serif'] },
+  }}
+};
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Karla:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
+<style>
+  body { font-family:'Karla',system-ui,sans-serif; }
+  .font-display { font-family:'Fraunces',Georgia,serif; }
+  .grain::before {
+    content:''; position:fixed; inset:0; pointer-events:none; z-index:50; opacity:.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  }
+  .sombra { box-shadow: 0 1px 2px rgba(10,6,20,.55), 0 10px 30px -10px rgba(10,6,20,.7), 0 24px 60px -20px rgba(217,164,65,.08); }
+  :focus-visible { outline:2px solid #d9a441; outline-offset:2px; border-radius:4px; }
+  .nav-link { padding:.35rem .7rem; border-radius:9999px; color:#b5a9cf; transition:color .15s ease; }
+  .nav-link:hover { color:#f7f0e6; }
+  .nav-link.active { color:#f7f0e6; background:#2a1f47; }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none!important; transition:none!important; } }
+</style>
+</head>
+<body class="grain bg-noche-deep text-crema min-h-screen">
+
+<nav class="sticky top-0 z-40 bg-noche-deep/85 backdrop-blur border-b border-noche-line">
+  <div class="max-w-5xl mx-auto px-5 h-14 flex items-center justify-between gap-3">
+    <a href="index.html" class="font-display text-lg whitespace-nowrap flex items-center gap-2">
+      <svg class="w-5 h-5 text-marigold shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6L5.6 18.4" opacity=".55"/></svg>
+      Entre bicis <em class="italic text-marigold">y libros</em>
+    </a>
+    <div class="flex items-center gap-1 text-sm overflow-x-auto">
+      <a class="nav-link" href="index.html">Inicio</a>
+      <a class="nav-link" href="biblioteca.html">Biblioteca</a>
+      <a class="nav-link active" href="ranking.html">Ranking</a>
+      <a class="nav-link" href="reglas.html">Reglas</a>
+      <a class="nav-link flex items-center gap-2" href="perfil.html"><span id="nav-avatar" class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-noche-deep" style="background:#d9a441"></span><span class="hidden sm:inline" id="nav-name"></span></a>
+    </div>
+  </div>
+</nav>
+
+<main class="max-w-4xl mx-auto px-5 pb-24">
+  <header class="pt-12 pb-10 text-center">
+    <p class="uppercase tracking-[0.3em] text-xs text-crema-dim mb-3">la lotería del club</p>
+    <h1 class="font-display text-4xl sm:text-5xl font-semibold">Ranking</h1>
+    <p class="mt-3 text-crema-dim italic font-display">quién lee, quién llega, quién gana la rifa</p>
+  </header>
+
+  <section id="podium" class="flex items-end justify-center gap-4 sm:gap-8 mb-14"></section>
+
+  <section class="bg-noche-surface border border-noche-line rounded-2xl sombra overflow-x-auto">
+    <table class="w-full text-sm min-w-[560px]">
+      <thead>
+        <tr class="text-left text-xs uppercase tracking-wider text-crema-dim border-b border-noche-line">
+          <th class="px-5 py-4">#</th>
+          <th class="px-5 py-4">miembro</th>
+          <th class="px-5 py-4 text-center">📚 leídos</th>
+          <th class="px-5 py-4 text-center">🪑 asistencias</th>
+          <th class="px-5 py-4 text-center">📝 propuestas</th>
+          <th class="px-5 py-4 text-center">🔥 elegidas</th>
+        </tr>
+      </thead>
+      <tbody id="table-body">
+        <tr><td colspan="6" class="px-5 py-8 text-crema-dim">Cargando…</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <p id="badges" class="text-center text-crema-dim text-sm mt-8"></p>
+</main>
+
+<script>
+const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+  ? 'http://localhost:3001' : 'https://bookclub-api.onrender.com';
+const token = localStorage.getItem('bcToken');
+const me = (() => { try { return JSON.parse(localStorage.getItem('bcMember')); } catch { return null; } })();
+if (!token) location.href = 'login.html';
+
+async function api(path, opts = {}) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...opts,
+    headers: { 'x-member-token': token, 'Content-Type': 'application/json', ...(opts.headers || {}) },
+  });
+  if (res.status === 401) { localStorage.removeItem('bcToken'); localStorage.removeItem('bcMember'); location.href = 'login.html'; throw new Error('401'); }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Error de conexión');
+  return data;
+}
+function esc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+if (me) {
+  document.getElementById('nav-avatar').textContent = me.name[0];
+  document.getElementById('nav-avatar').style.background = me.avatar_color || '#d9a441';
+  document.getElementById('nav-name').textContent = me.name;
+}
+
+function avatar(r, size){
+  return `<span class="rounded-full flex items-center justify-center font-display font-semibold text-noche-deep" style="width:${size}px;height:${size}px;background:${esc(r.avatar_color || '#d9a441')};font-size:${size * .42}px">${esc(r.name[0])}</span>`;
+}
+
+async function load(){
+  try {
+    const rows = await api('/api/leaderboard');
+    if (!rows.length) return;
+
+    // Podium: 2nd | 1st | 3rd
+    const [first, second, third] = rows;
+    const step = (r, place, h, medal) => r ? `
+      <div class="flex flex-col items-center gap-2 ${place === 1 ? '' : 'opacity-90'}">
+        ${place === 1 ? '<span class="text-2xl -mb-1">👑</span>' : `<span class="text-xl">${medal}</span>`}
+        ${avatar(r, place === 1 ? 72 : 56)}
+        <p class="font-semibold ${place === 1 ? 'text-lg' : 'text-sm'}">${esc(r.name)}</p>
+        <div class="bg-noche-surface border border-noche-line rounded-t-xl w-24 sm:w-28 flex flex-col items-center justify-end pb-3 sombra" style="height:${h}px">
+          <p class="font-display text-3xl font-semibold text-marigold">${r.books_read}</p>
+          <p class="text-[10px] uppercase tracking-wider text-crema-dim">libros</p>
+        </div>
+      </div>` : '';
+    document.getElementById('podium').innerHTML =
+      step(second, 2, 96, '🥈') + step(first, 1, 130, '') + step(third, 3, 76, '🥉');
+
+    // Column leaders get a flame highlight
+    const max = {
+      books_read: Math.max(...rows.map(r => r.books_read)),
+      events_attended: Math.max(...rows.map(r => r.events_attended)),
+      suggestions: Math.max(...rows.map(r => r.suggestions)),
+      picked: Math.max(...rows.map(r => r.picked)),
+    };
+    const cell = (v, isMax) => `<td class="px-5 py-3.5 text-center ${isMax && v > 0 ? 'text-marigold font-bold' : ''}">${v}</td>`;
+
+    document.getElementById('table-body').innerHTML = rows.map((r, i) => `
+      <tr class="border-b border-noche-line/50 ${me && r.id === me.id ? 'bg-marigold/5' : ''}">
+        <td class="px-5 py-3.5 font-display text-crema-dim">${i + 1}</td>
+        <td class="px-5 py-3.5"><span class="flex items-center gap-3">${avatar(r, 30)}<span class="font-semibold">${esc(r.name)}</span>${me && r.id === me.id ? '<span class="text-xs text-marigold">(tú)</span>' : ''}</span></td>
+        ${cell(r.books_read, r.books_read === max.books_read)}
+        ${cell(r.events_attended, r.events_attended === max.events_attended)}
+        ${cell(r.suggestions, r.suggestions === max.suggestions)}
+        ${cell(r.picked, r.picked === max.picked)}
+      </tr>`).join('');
+
+    const luckiest = rows.filter(r => r.picked === max.picked && max.picked > 0);
+    if (luckiest.length) {
+      document.getElementById('badges').innerHTML =
+        `🔥 El cáliz quiere a <strong class="text-crema">${luckiest.map(r => esc(r.name)).join(' y ')}</strong> — ${max.picked} propuesta${max.picked === 1 ? '' : 's'} elegida${max.picked === 1 ? '' : 's'}`;
+    }
+  } catch (err) { if (err.message !== '401') console.error(err); }
+}
+load();
+</script>
+</body>
+</html>

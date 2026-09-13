@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>La Votación — Entre bicis y libros</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: { extend: {
+    colors: {
+      noche: { DEFAULT:'#1e1533', deep:'#150e24', surface:'#2a1f47', line:'#3d2f61' },
+      crema: { DEFAULT:'#f7f0e6', dim:'#b5a9cf' },
+      marigold: '#d9a441',
+      orquidea: '#c9679a',
+      caliz: '#f5c96b',
+    },
+    fontFamily: { display:['Fraunces','Georgia','serif'], body:['Karla','system-ui','sans-serif'] },
+  }}
+};
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Karla:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
+<style>
+  body { font-family:'Karla',system-ui,sans-serif; }
+  .font-display { font-family:'Fraunces',Georgia,serif; }
+  .grain::before {
+    content:''; position:fixed; inset:0; pointer-events:none; z-index:50; opacity:.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  }
+  .sombra { box-shadow: 0 1px 2px rgba(10,6,20,.55), 0 10px 30px -10px rgba(10,6,20,.7), 0 24px 60px -20px rgba(217,164,65,.08); }
+  .sombra-crema { box-shadow: 0 2px 4px rgba(10,6,20,.4), 0 12px 32px -8px rgba(10,6,20,.55), 0 0 0 1px rgba(247,240,230,.06); }
+  :focus-visible { outline:2px solid #d9a441; outline-offset:2px; border-radius:4px; }
+  .cover-wrap { position:relative; overflow:hidden; border-radius:0.5rem; background:#2a1f47; }
+  .cover-wrap::after { content:''; position:absolute; inset:0; background:linear-gradient(160deg, rgba(245,201,107,.12), rgba(30,21,51,.28) 55%, rgba(201,103,154,.18)); mix-blend-mode:multiply; pointer-events:none; }
+  .nav-link { padding:.35rem .7rem; border-radius:9999px; color:#b5a9cf; transition:color .15s ease; }
+  .nav-link:hover { color:#f7f0e6; }
+  /* tally bar: track is static, inner fill animates via scaleX only */
+  .tally-track { height:6px; border-radius:3px; background:#3d2f61; overflow:hidden; }
+  .tally-fill { height:100%; border-radius:3px; background:linear-gradient(90deg, #d9a441, #f5c96b); transform-origin:left center; transform:scaleX(0); transition:transform .6s cubic-bezier(.3,.8,.3,1); }
+  .confeti { position:fixed; top:-4vh; border-radius:1px; will-change:transform,opacity; z-index:80; }
+  @keyframes card-in { from { transform:scale(.55) rotate(-4deg); opacity:0; } to { transform:scale(1) rotate(0); opacity:1; } }
+  .card-in { animation:card-in .8s cubic-bezier(.34,1.56,.64,1) forwards; }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none!important; transition:none!important; } }
+</style>
+</head>
+<body class="grain bg-noche-deep text-crema min-h-screen">
+
+<nav class="sticky top-0 z-40 bg-noche-deep/85 backdrop-blur border-b border-noche-line">
+  <div class="max-w-5xl mx-auto px-5 h-14 flex items-center justify-between gap-3">
+    <a href="index.html" class="font-display text-lg whitespace-nowrap flex items-center gap-2">
+      <svg class="w-5 h-5 text-marigold shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6L5.6 18.4" opacity=".55"/></svg>
+      Entre bicis <em class="italic text-marigold">y libros</em>
+    </a>
+    <div class="flex items-center gap-1 text-sm overflow-x-auto">
+      <a class="nav-link" href="index.html">Inicio</a>
+      <a class="nav-link" href="biblioteca.html">Biblioteca</a>
+      <a class="nav-link" href="ranking.html">Ranking</a>
+      <a class="nav-link" href="reglas.html">Reglas</a>
+      <a class="nav-link flex items-center gap-2" href="perfil.html"><span id="nav-avatar" class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-noche-deep" style="background:#d9a441"></span><span class="hidden sm:inline" id="nav-name"></span></a>
+    </div>
+  </div>
+</nav>
+
+<main class="max-w-3xl mx-auto px-5 pb-24">
+  <div class="pt-10">
+    <a id="back" href="index.html" class="text-crema-dim text-sm hover:text-crema">← volver al evento</a>
+  </div>
+
+  <header class="mt-4 mb-8 text-center">
+    <p id="eyebrow" class="uppercase tracking-[0.35em] text-xs text-caliz/80 mb-3">la votación</p>
+    <h1 id="event-title" class="font-display text-3xl sm:text-5xl font-semibold">&nbsp;</h1>
+    <p id="theme-chip" class="mt-3"></p>
+    <p id="countdown" class="mt-3 text-crema-dim italic font-display"></p>
+  </header>
+
+  <div id="runoff-banner" class="hidden mb-6 bg-orquidea/10 border border-orquidea/40 rounded-2xl p-4 text-center">
+    <p class="font-display text-lg text-orquidea">¡Empate! Segunda vuelta 🗳️</p>
+    <p id="runoff-text" class="text-sm text-crema-dim mt-1"></p>
+  </div>
+
+  <section id="candidates" class="space-y-4">
+    <p class="text-crema-dim py-6 text-center">Cargando la papeleta…</p>
+  </section>
+
+  <p id="total-line" class="text-center text-sm text-crema-dim mt-8"></p>
+</main>
+
+<!-- Winner overlay (hidden until decided) -->
+<div id="winner-overlay" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-6 bg-noche-deep/85 backdrop-blur-sm">
+  <div id="winner-card" class="bg-crema text-noche rounded-2xl p-8 max-w-sm w-full text-center" style="box-shadow:0 0 80px rgba(245,201,107,.35), 0 24px 60px rgba(10,6,20,.8)">
+    <p class="text-xs uppercase tracking-[0.3em] text-orquidea mb-5">el club ha votado</p>
+    <div id="w-cover" class="w-36 mx-auto rounded-lg overflow-hidden shadow-xl mb-5"></div>
+    <h2 id="w-title" class="font-display text-3xl font-semibold leading-tight"></h2>
+    <p id="w-author" class="text-noche/70 mt-2"></p>
+    <p id="w-by" class="mt-4 text-sm"></p>
+    <a id="w-link" href="#" class="mt-6 inline-block px-6 py-3 rounded-xl bg-noche text-crema font-bold text-sm hover:bg-noche-surface active:scale-[.98]">Ver evento</a>
+  </div>
+</div>
+
+<script>
+const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+  ? 'http://localhost:3001' : 'https://bookclub-api.onrender.com';
+const token = localStorage.getItem('bcToken');
+const me = (() => { try { return JSON.parse(localStorage.getItem('bcMember')); } catch { return null; } })();
+if (!token) location.href = 'login.html';
+
+const eventId = new URLSearchParams(location.search).get('id');
+if (!eventId) location.href = 'index.html';
+document.getElementById('back').href = `evento.html?id=${eventId}`;
+document.getElementById('w-link').href = `evento.html?id=${eventId}`;
+
+function esc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+function fmtFull(iso){ const d = new Date(iso); return `${d.getDate()} de ${MESES[d.getMonth()]} · ${d.toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'})}`; }
+
+if (me) {
+  document.getElementById('nav-avatar').textContent = me.name[0];
+  document.getElementById('nav-avatar').style.background = me.avatar_color || '#d9a441';
+  document.getElementById('nav-name').textContent = me.name;
+}
+
+async function api(path, opts = {}) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...opts,
+    headers: { 'x-member-token': token, 'Content-Type': 'application/json', ...(opts.headers || {}) },
+  });
+  if (res.status === 401) { localStorage.removeItem('bcToken'); localStorage.removeItem('bcMember'); location.href = 'login.html'; throw new Error('401'); }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) { const err = new Error(data.error || 'Error de conexión'); err.data = data; err.status = res.status; throw err; }
+  return data;
+}
+
+let state = 'loading';   // loading | open | done
+let pollTimer = null;
+let countdownTimer = null;
+let deadline = null;
+let voting = false;      // true while a PUT /vote is in flight
+
+async function poll(){
+  try {
+    const data = await api(`/api/events/${eventId}/votes`);
+    render(data);
+  } catch (e) {
+    if (e.message === '401') return;
+    // Raffle event → this page doesn't apply, go to the goblet
+    if (e.status === 400 && e.data?.selection_method === 'raffle') { location.href = `rifa.html?id=${eventId}`; return; }
+  }
+  if (state !== 'done') pollTimer = setTimeout(poll, 3000 + (Math.random() * 800 - 400));
+}
+
+function render(data){
+  document.getElementById('event-title').textContent = data.event_title || '';
+  document.getElementById('eyebrow').textContent = data.round > 1 ? `la votación · ronda ${data.round}` : 'la votación';
+  document.getElementById('theme-chip').innerHTML = data.theme
+    ? `<span class="inline-block text-xs px-3 py-1 rounded-full bg-orquidea/15 text-orquidea font-bold uppercase tracking-widest">🎭 ${esc(data.theme)}</span>` : '';
+
+  const banner = document.getElementById('runoff-banner');
+  if (data.round > 1 && data.state === 'open') {
+    banner.classList.remove('hidden');
+    document.getElementById('runoff-text').textContent = `Solo quedan ${data.candidates.length} libros en la papeleta. Tu voto de la ronda anterior no cuenta — vota otra vez.`;
+  } else {
+    banner.classList.add('hidden');
+  }
+
+  deadline = data.vote_deadline ? new Date(data.vote_deadline) : null;
+  updateCountdown(data);
+
+  if (data.state === 'decided') {
+    if (state !== 'done') showWinner(data);
+    return;
+  }
+  state = 'open';
+
+  const closed = data.deadline_passed;
+  const maxVotes = Math.max(1, ...data.candidates.map(c => c.votes));
+  document.getElementById('candidates').innerHTML = data.candidates.map(c => {
+    const mine = data.my_vote === c.suggestion_id;
+    const voterChips = c.voters.map(v => `
+      <span class="inline-flex items-center gap-1.5 text-xs bg-noche-deep border border-noche-line rounded-full pl-1 pr-2.5 py-0.5">
+        <span class="w-4 h-4 rounded-full inline-block" style="background:${esc(v.avatar_color)}"></span>${esc(v.name)}
+      </span>`).join(' ');
+    return `
+    <article class="bg-noche-surface border ${mine ? 'border-marigold/60' : 'border-noche-line'} rounded-2xl sombra p-5 flex gap-4">
+      <div class="cover-wrap w-16 sm:w-20 shrink-0 self-start">
+        ${c.book?.cover_url ? `<img src="${esc(c.book.cover_url)}" alt="" class="w-full aspect-[2/3] object-cover">` : `<div class="w-full aspect-[2/3] flex items-center justify-center font-display text-center p-2 text-crema-dim text-xs">${esc(c.book?.title || '?')}</div>`}
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <h3 class="font-semibold leading-snug">${esc(c.book?.title || '?')}</h3>
+            <p class="text-sm text-crema-dim">${esc(c.book?.author || '')}</p>
+            <p class="text-xs text-crema-dim mt-1">propuesto por <span class="text-crema">${esc(c.suggested_by)}</span></p>
+          </div>
+          <button class="vote-btn shrink-0 px-4 py-2 rounded-xl text-sm font-bold active:scale-[.97] ${mine
+            ? 'bg-marigold text-noche-deep'
+            : 'border border-marigold/40 text-marigold hover:bg-marigold/10'} ${closed ? 'opacity-40 pointer-events-none' : ''}"
+            data-id="${c.suggestion_id}" ${closed ? 'disabled' : ''}>${mine ? 'Tu voto ✓' : 'Votar'}</button>
+        </div>
+        <div class="mt-3 flex items-center gap-3">
+          <div class="tally-track flex-1"><div class="tally-fill" style="transform:scaleX(${c.votes / maxVotes})"></div></div>
+          <span class="text-sm font-display font-semibold text-caliz w-16 text-right">${c.votes} voto${c.votes === 1 ? '' : 's'}</span>
+        </div>
+        ${c.voters.length ? `<div class="mt-2.5 flex flex-wrap gap-1.5">${voterChips}</div>` : ''}
+      </div>
+    </article>`;
+  }).join('');
+
+  document.getElementById('total-line').textContent = data.total_votes
+    ? `${data.total_votes} voto${data.total_votes === 1 ? '' : 's'} hasta ahora — el voto es público y puedes cambiarlo hasta el cierre`
+    : 'nadie ha votado todavía — sé la primera 🗳️';
+
+  document.querySelectorAll('.vote-btn').forEach(b => b.addEventListener('click', async () => {
+    if (voting) return;
+    voting = true;
+    try {
+      await api(`/api/events/${eventId}/vote`, { method: 'PUT', body: JSON.stringify({ suggestion_id: b.dataset.id }) });
+      clearTimeout(pollTimer);
+      await poll();
+    } catch (e) {
+      if (e.message !== '401') document.getElementById('total-line').textContent = e.message;
+    } finally { voting = false; }
+  }));
+}
+
+function updateCountdown(data){
+  clearInterval(countdownTimer);
+  const el = document.getElementById('countdown');
+  if (data.state === 'decided') { el.textContent = 'la votación ya terminó'; return; }
+  if (!deadline) { el.textContent = 'abierta hasta que Paola cierre la votación'; return; }
+
+  const tick = () => {
+    const ms = deadline - Date.now();
+    if (ms <= 0) { el.textContent = 'votación cerrada — esperando el recuento…'; clearInterval(countdownTimer); return; }
+    const d = Math.floor(ms / 86400000), h = Math.floor(ms % 86400000 / 3600000), m = Math.floor(ms % 3600000 / 60000);
+    el.textContent = `cierra el ${fmtFull(deadline.toISOString())} — ${d ? `${d}d ` : ''}${h}h ${m}m`;
+  };
+  tick();
+  countdownTimer = setInterval(tick, 30000);
+}
+
+function showWinner(data){
+  state = 'done';
+  clearTimeout(pollTimer);
+  clearInterval(countdownTimer);
+  const w = data.winner || {};
+  document.getElementById('countdown').textContent = 'la votación ya terminó';
+  document.getElementById('w-cover').innerHTML = w.book?.cover_url
+    ? `<img src="${esc(w.book.cover_url)}" alt="" class="w-full aspect-[2/3] object-cover">` : '';
+  document.getElementById('w-title').textContent = w.book?.title || '';
+  document.getElementById('w-author').textContent = w.book?.author || '';
+  document.getElementById('w-by').innerHTML = w.suggested_by
+    ? `🗳️ elegido por votación — propuesto por <strong>${esc(w.suggested_by)}</strong>` : '';
+
+  document.getElementById('winner-overlay').classList.remove('hidden');
+  const ageSec = data.drawn_at ? (Date.now() - new Date(data.drawn_at).getTime()) / 1000 : Infinity;
+  if (ageSec <= 90 && !reducedMotion) {
+    document.getElementById('winner-card').classList.add('card-in');
+    confetti();
+  }
+}
+
+function confetti(){
+  const colors = ['#d9a441', '#c9679a', '#f5c96b', '#f7f0e6', '#b28ae0'];
+  for (let i = 0; i < 90; i++) {
+    const c = document.createElement('div');
+    c.className = 'confeti';
+    c.style.left = `${Math.random() * 100}vw`;
+    c.style.width = `${5 + Math.random() * 5}px`;
+    c.style.height = `${8 + Math.random() * 8}px`;
+    c.style.background = colors[i % colors.length];
+    document.body.appendChild(c);
+    c.animate([
+      { transform: 'translateY(0) rotate(0deg)', opacity: 1 },
+      { transform: `translateY(${window.innerHeight + 80}px) translateX(${Math.random() * 160 - 80}px) rotate(${Math.random() * 900 - 450}deg)`, opacity: .9 },
+    ], { duration: 2600 + Math.random() * 2200, delay: Math.random() * 900, easing: 'cubic-bezier(.2,.6,.6,1)', fill: 'forwards' });
+    setTimeout(() => c.remove(), 6500);
+  }
+}
+
+poll();
+</script>
+</body>
+</html>

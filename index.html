@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Entre bicis y libros — Ámsterdam</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: { extend: {
+    colors: {
+      noche: { DEFAULT:'#1e1533', deep:'#150e24', surface:'#2a1f47', line:'#3d2f61' },
+      crema: { DEFAULT:'#f7f0e6', dim:'#b5a9cf' },
+      marigold: '#d9a441',
+      orquidea: '#c9679a',
+      caliz: '#f5c96b',
+    },
+    fontFamily: { display:['Fraunces','Georgia','serif'], body:['Karla','system-ui','sans-serif'] },
+  }}
+};
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Karla:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
+<style>
+  body { font-family:'Karla',system-ui,sans-serif; }
+  .font-display { font-family:'Fraunces',Georgia,serif; }
+  .grain::before {
+    content:''; position:fixed; inset:0; pointer-events:none; z-index:50; opacity:.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  }
+  .sombra { box-shadow: 0 1px 2px rgba(10,6,20,.55), 0 10px 30px -10px rgba(10,6,20,.7), 0 24px 60px -20px rgba(217,164,65,.08); }
+  .sombra-crema { box-shadow: 0 2px 4px rgba(10,6,20,.4), 0 12px 32px -8px rgba(10,6,20,.55), 0 0 0 1px rgba(247,240,230,.06); }
+  :focus-visible { outline:2px solid #d9a441; outline-offset:2px; border-radius:4px; }
+  .cover-wrap { position:relative; overflow:hidden; border-radius:0.75rem; background:#2a1f47; }
+  .cover-wrap::after { content:''; position:absolute; inset:0; background:linear-gradient(160deg, rgba(245,201,107,.12), rgba(30,21,51,.28) 55%, rgba(201,103,154,.18)); mix-blend-mode:multiply; pointer-events:none; }
+  @keyframes flotar { 0%,100% { transform:translateY(0) rotate(var(--rot,0deg)); } 50% { transform:translateY(-9px) rotate(calc(var(--rot,0deg) * -0.6)); } }
+  .flota { animation: flotar var(--dur,6s) ease-in-out infinite; animation-delay: var(--delay,0s); }
+  .carousel { scroll-snap-type:x mandatory; scrollbar-width:thin; scrollbar-color:#3d2f61 transparent; }
+  .carousel > * { scroll-snap-align:start; }
+  .nav-link { padding:.35rem .7rem; border-radius:9999px; color:#b5a9cf; transition:color .15s ease; }
+  .nav-link:hover { color:#f7f0e6; }
+  .nav-link.active { color:#f7f0e6; background:#2a1f47; }
+  .comilla { position:absolute; font-family:'Fraunces',Georgia,serif; font-style:italic; font-size:9rem; line-height:1; color:rgba(217,164,65,.14); pointer-events:none; user-select:none; }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none!important; transition:none!important; } }
+</style>
+</head>
+<body class="grain bg-noche-deep text-crema min-h-screen">
+
+<nav class="sticky top-0 z-40 bg-noche-deep/85 backdrop-blur border-b border-noche-line">
+  <div class="max-w-5xl mx-auto px-5 h-14 flex items-center justify-between gap-3">
+    <a href="index.html" class="font-display text-lg whitespace-nowrap flex items-center gap-2">
+      <svg class="w-5 h-5 text-marigold shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6L5.6 18.4" opacity=".55"/></svg>
+      Entre bicis <em class="italic text-marigold">y libros</em>
+    </a>
+    <div class="flex items-center gap-1 text-sm overflow-x-auto">
+      <a class="nav-link active" href="index.html">Inicio</a>
+      <a class="nav-link" href="biblioteca.html">Biblioteca</a>
+      <a class="nav-link" href="ranking.html">Ranking</a>
+      <a class="nav-link" href="reglas.html">Reglas</a>
+      <a class="nav-link flex items-center gap-2" href="perfil.html"><span id="nav-avatar" class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-noche-deep" style="background:#d9a441"></span><span class="hidden sm:inline" id="nav-name"></span></a>
+    </div>
+  </div>
+</nav>
+
+<main class="max-w-5xl mx-auto px-5 pb-24">
+
+  <!-- Hero -->
+  <header class="pt-14 pb-10 grid md:grid-cols-[1.2fr_.8fr] gap-10 items-center relative">
+    <span class="comilla -top-2 -left-6 sm:-left-10" aria-hidden="true">“</span>
+    <div class="relative">
+      <p class="uppercase tracking-[0.3em] text-xs text-crema-dim mb-4">Ámsterdam · desde 2024</p>
+      <h1 class="font-display text-5xl sm:text-6xl lg:text-7xl font-semibold leading-[1.05]" style="font-variation-settings:'opsz' 120;">
+        Entre bicis<br><em class="italic text-marigold">y libros</em>
+      </h1>
+      <p class="mt-5 text-crema-dim max-w-md leading-relaxed">Un club de lectoras latinas pedaleando entre canales. Cada mes una temática y un libro elegido por todas — al azar o por votación — y una mesa llena de historias.</p>
+      <div id="hero-cta" class="mt-8"></div>
+    </div>
+    <div id="hero-book" class="justify-self-center md:justify-self-end"></div>
+  </header>
+
+  <!-- Next event ticket -->
+  <section id="next-event" class="mb-16"></section>
+
+  <!-- Calendar -->
+  <section class="mb-16">
+    <div class="flex items-baseline justify-between mb-5">
+      <h2 class="font-display text-2xl sm:text-3xl">Calendario</h2>
+      <span class="text-xs uppercase tracking-[0.2em] text-crema-dim">próximos encuentros</span>
+    </div>
+    <div id="calendar-list" class="space-y-3">
+      <p class="text-crema-dim py-6">Cargando…</p>
+    </div>
+  </section>
+
+  <!-- Books read carousel -->
+  <section>
+    <div class="flex items-baseline justify-between mb-2">
+      <h2 class="font-display text-2xl sm:text-3xl">Lo que hemos leído</h2>
+      <a href="biblioteca.html" class="text-sm text-marigold hover:underline">ver biblioteca →</a>
+    </div>
+    <p id="carousel-count" class="text-crema-dim text-sm mb-6"></p>
+    <div id="carousel" class="carousel flex gap-6 overflow-x-auto pb-8 pt-4 -mx-5 px-5">
+      <p class="text-crema-dim py-6">Cargando…</p>
+    </div>
+  </section>
+
+</main>
+
+<footer class="border-t border-noche-line py-8 text-center text-crema-dim text-sm space-y-2">
+  <p class="font-display italic text-crema/80">«La lectura de un buen libro es un diálogo incesante»</p>
+  <p class="text-xs uppercase tracking-[0.2em]">— hecho con cariño para el club —</p>
+</footer>
+
+<script>
+const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+  ? 'http://localhost:3001' : 'https://bookclub-api.onrender.com';
+const token = localStorage.getItem('bcToken');
+const me = (() => { try { return JSON.parse(localStorage.getItem('bcMember')); } catch { return null; } })();
+if (!token) location.href = 'login.html';
+
+async function api(path, opts = {}) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...opts,
+    headers: { 'x-member-token': token, 'Content-Type': 'application/json', ...(opts.headers || {}) },
+  });
+  if (res.status === 401) { localStorage.removeItem('bcToken'); localStorage.removeItem('bcMember'); location.href = 'login.html'; throw new Error('401'); }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Error de conexión');
+  return data;
+}
+function esc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+function fmtDate(iso){ const d = new Date(iso); return `${d.getDate()} ${MESES[d.getMonth()]} ${d.getFullYear()}`; }
+function fmtTime(iso){ const d = new Date(iso); return d.toLocaleTimeString('es', { hour:'2-digit', minute:'2-digit' }); }
+
+if (me) {
+  document.getElementById('nav-avatar').textContent = me.name[0];
+  document.getElementById('nav-avatar').style.background = me.avatar_color || '#d9a441';
+  document.getElementById('nav-name').textContent = me.name;
+}
+
+function scoreBadge(avg, count){
+  if (avg === null || avg === undefined) return '<span class="text-crema-dim text-xs">sin notas aún</span>';
+  return `<span class="font-display font-semibold text-marigold">${avg}</span><span class="text-crema-dim text-xs"> / 10 · ${count} voto${count === 1 ? '' : 's'}</span>`;
+}
+
+async function load(){
+  try {
+    const [events, books] = await Promise.all([api('/api/events'), api('/api/books')]);
+
+    // Hero: current reading book
+    const reading = books.find(b => b.status === 'reading');
+    if (reading) {
+      document.getElementById('hero-book').innerHTML = `
+        <a href="biblioteca.html?abrir=${reading.id}" class="block flota" style="--rot:2deg; --dur:7s">
+          <div class="cover-wrap sombra-crema w-44 sm:w-52">
+            ${reading.cover_url ? `<img src="${esc(reading.cover_url)}" alt="${esc(reading.title)}" class="w-full h-64 sm:h-72 object-cover">` : `<div class="w-full h-64 sm:h-72 flex items-center justify-center font-display text-center p-4 text-crema-dim">${esc(reading.title)}</div>`}
+          </div>
+          <p class="mt-3 text-center text-xs uppercase tracking-[0.2em] text-caliz">estamos leyendo</p>
+          <p class="text-center font-display mt-1">${esc(reading.title)}</p>
+        </a>`;
+    }
+
+    // Next event ticket
+    const next = events.upcoming[0];
+    if (next) {
+      const d = new Date(next.event_at);
+      const days = Math.ceil((d - Date.now()) / 86400000);
+      const selectionOpen = next.status === 'planned';
+      const isVote = next.selection_method === 'vote';
+      document.getElementById('next-event').innerHTML = `
+        <div class="bg-crema text-noche rounded-2xl sombra-crema p-6 sm:p-8 relative overflow-hidden" style="transform:rotate(-.5deg)">
+          <div class="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-noche-deep"></div>
+          <div class="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-noche-deep"></div>
+          <div class="flex flex-col sm:flex-row gap-6 items-start sm:items-center">
+            <div class="text-center border-r-0 sm:border-r-2 border-dashed border-noche/20 pr-0 sm:pr-6">
+              <p class="font-display text-5xl font-bold leading-none">${d.getDate()}</p>
+              <p class="uppercase tracking-widest text-sm mt-1">${MESES[d.getMonth()]}</p>
+            </div>
+            <div class="flex-1">
+              <p class="text-xs uppercase tracking-[0.25em] text-orquidea mb-1">próximo encuentro · en ${days} día${days === 1 ? '' : 's'}</p>
+              <h3 class="font-display text-2xl sm:text-3xl font-semibold">${esc(next.title)}</h3>
+              <p class="mt-1 text-noche/70">${esc(next.location || 'Lugar por confirmar')} · ${fmtTime(next.event_at)}</p>
+              ${next.theme ? `<p class="mt-2"><span class="inline-block text-xs px-2.5 py-1 rounded-full bg-orquidea/15 text-orquidea font-bold">🎭 Temática: ${esc(next.theme)}</span></p>` : ''}
+              ${next.winning_book ? `<p class="mt-2 text-sm">📖 Leemos <strong>${esc(next.winning_book.title)}</strong></p>` : ''}
+            </div>
+            <div class="flex flex-col gap-2 w-full sm:w-auto">
+              <a href="evento.html?id=${next.id}" class="text-center px-5 py-2.5 rounded-xl bg-noche text-crema font-bold text-sm hover:bg-noche-surface active:scale-[.98] transition-colors">Ver evento</a>
+              ${selectionOpen ? (isVote
+                ? `<a href="votacion.html?id=${next.id}" class="text-center px-5 py-2.5 rounded-xl border-2 border-noche/15 font-bold text-sm text-noche hover:border-noche/30 active:scale-[.98]">La votación 🗳️</a>`
+                : `<a href="rifa.html?id=${next.id}" class="text-center px-5 py-2.5 rounded-xl border-2 border-noche/15 font-bold text-sm text-noche hover:border-noche/30 active:scale-[.98]">El cáliz 🔥</a>`) : ''}
+            </div>
+          </div>
+        </div>`;
+      document.getElementById('hero-cta').innerHTML = selectionOpen
+        ? (isVote
+          ? `<a href="votacion.html?id=${next.id}" class="inline-block px-6 py-3 rounded-xl bg-marigold text-noche-deep font-bold hover:brightness-110 active:scale-[.98] transition-[filter]">Vota por el libro del mes</a>`
+          : `<a href="evento.html?id=${next.id}" class="inline-block px-6 py-3 rounded-xl bg-marigold text-noche-deep font-bold hover:brightness-110 active:scale-[.98] transition-[filter]">Propón tu libro para la rifa</a>`)
+        : `<a href="evento.html?id=${next.id}" class="inline-block px-6 py-3 rounded-xl bg-marigold text-noche-deep font-bold hover:brightness-110 active:scale-[.98] transition-[filter]">Ver próximo encuentro</a>`;
+    } else {
+      document.getElementById('next-event').innerHTML = `<div class="bg-noche-surface border border-noche-line rounded-2xl p-8 text-center text-crema-dim">No hay encuentros programados todavía. Paola está tramando algo… ✨</div>`;
+    }
+
+    // Calendar
+    const calendar = document.getElementById('calendar-list');
+    if (events.upcoming.length) {
+      calendar.innerHTML = events.upcoming.map(e => {
+        const d = new Date(e.event_at);
+        const tag = e.status === 'planned'
+          ? (e.selection_method === 'vote'
+            ? '<span class="text-xs px-2.5 py-1 rounded-full bg-orquidea/15 text-orquidea whitespace-nowrap">votación abierta</span>'
+            : '<span class="text-xs px-2.5 py-1 rounded-full bg-marigold/15 text-marigold whitespace-nowrap">propuestas abiertas</span>')
+          : e.status === 'raffled'
+            ? '<span class="text-xs px-2.5 py-1 rounded-full bg-caliz/15 text-caliz whitespace-nowrap">libro elegido</span>' : '';
+        return `
+        <a href="evento.html?id=${e.id}" class="flex items-center gap-4 bg-noche-surface border border-noche-line rounded-xl px-4 py-3 sombra hover:border-marigold/40 transition-colors">
+          <div class="text-center w-12 shrink-0">
+            <p class="font-display text-2xl font-semibold leading-none">${d.getDate()}</p>
+            <p class="text-[10px] uppercase tracking-widest text-crema-dim">${MESES[d.getMonth()]}</p>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="font-semibold truncate">${esc(e.title)}</p>
+            <p class="text-sm text-crema-dim truncate">${esc(e.location || '')}</p>
+          </div>
+          ${tag}
+        </a>`;
+      }).join('');
+    } else {
+      calendar.innerHTML = '<p class="text-crema-dim py-6">Nada en el calendario todavía.</p>';
+    }
+
+    // Carousel of read books
+    const read = books.filter(b => b.status === 'read');
+    document.getElementById('carousel-count').textContent = read.length
+      ? `${read.length} libro${read.length === 1 ? '' : 's'} desde que empezamos`
+      : '';
+    const carousel = document.getElementById('carousel');
+    if (read.length) {
+      carousel.innerHTML = read.map((b, i) => `
+        <a href="biblioteca.html?abrir=${b.id}" class="flota block w-40 shrink-0" style="--rot:${(i % 2 ? 1.5 : -1.5)}deg; --dur:${5.5 + (i % 3)}s; --delay:${-(i * 0.7)}s">
+          <div class="cover-wrap sombra-crema">
+            ${b.cover_url ? `<img src="${esc(b.cover_url)}" alt="${esc(b.title)}" class="w-40 h-60 object-cover" loading="lazy">` : `<div class="w-40 h-60 flex items-center justify-center font-display text-center p-3 text-crema-dim text-sm">${esc(b.title)}</div>`}
+            <div class="absolute bottom-0 inset-x-0 bg-noche-deep/85 backdrop-blur-sm px-3 py-2 z-10">${scoreBadge(b.avg_score, b.rating_count)}</div>
+          </div>
+          <p class="mt-3 text-sm font-semibold leading-snug">${esc(b.title)}</p>
+          <p class="text-xs text-crema-dim">${esc(b.author || '')}</p>
+        </a>`).join('');
+    } else {
+      carousel.innerHTML = '<p class="text-crema-dim py-6">La estantería está esperando su primer libro.</p>';
+    }
+  } catch (err) {
+    if (err.message !== '401') console.error(err);
+  }
+}
+load();
+</script>
+</body>
+</html>

@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Entre bicis y libros</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: { extend: {
+    colors: {
+      noche: { DEFAULT:'#1e1533', deep:'#150e24', surface:'#2a1f47', line:'#3d2f61' },
+      crema: { DEFAULT:'#f7f0e6', dim:'#b5a9cf' },
+      marigold: '#d9a441',
+      orquidea: '#c9679a',
+      caliz: '#f5c96b',
+    },
+    fontFamily: { display:['Fraunces','Georgia','serif'], body:['Karla','system-ui','sans-serif'] },
+  }}
+};
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Karla:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
+<style>
+  body { font-family:'Karla',system-ui,sans-serif; }
+  .font-display { font-family:'Fraunces',Georgia,serif; }
+  .sombra { box-shadow: 0 1px 2px rgba(10,6,20,.55), 0 10px 30px -10px rgba(10,6,20,.7); }
+  :focus-visible { outline:2px solid #d9a441; outline-offset:2px; border-radius:4px; }
+  .tab { padding:.5rem 1rem; border-radius:.75rem; color:#b5a9cf; font-weight:700; font-size:.875rem; transition:color .15s ease, background-color .15s ease; }
+  .tab:hover { color:#f7f0e6; }
+  .tab.active { color:#150e24; background:#d9a441; }
+  .field { background:#150e24; border:1px solid #3d2f61; border-radius:.75rem; padding:.65rem .8rem; font-size:.875rem; width:100%; }
+  .field::placeholder { color:rgba(181,169,207,.6); }
+  .field:focus { border-color:rgba(217,164,65,.6); outline:none; }
+  .btn { border-radius:.75rem; font-weight:700; font-size:.875rem; padding:.6rem 1.1rem; transition:filter .15s ease; }
+  .btn:active { transform:scale(.98); }
+  .btn-primary { background:#d9a441; color:#150e24; }
+  .btn-primary:hover { filter:brightness(1.1); }
+  .btn-ghost { border:1px solid #3d2f61; color:#b5a9cf; }
+  .btn-ghost:hover { color:#f7f0e6; border-color:#54448a; }
+  .btn-danger { border:1px solid rgba(201,103,154,.5); color:#c9679a; }
+  .btn-danger:hover { background:rgba(201,103,154,.1); }
+  .btn-caliz { border:1px solid rgba(245,201,107,.5); color:#f5c96b; }
+  .btn-caliz:hover { background:rgba(245,201,107,.1); }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none!important; transition:none!important; } }
+</style>
+</head>
+<body class="bg-noche-deep text-crema min-h-screen">
+
+<!-- Token gate -->
+<div id="gate" class="hidden min-h-screen flex flex-col items-center justify-center px-6">
+  <h1 class="font-display text-3xl mb-1">Admin · Entre bicis <em class="italic text-marigold">y libros</em></h1>
+  <p class="text-crema-dim text-sm mb-6">Solo para Paola 💜</p>
+  <div class="w-full max-w-xs space-y-3">
+    <input id="gate-token" type="password" placeholder="Token de administración" class="field">
+    <button id="gate-btn" class="btn btn-primary w-full">Entrar</button>
+    <p id="gate-error" class="hidden text-orquidea text-sm text-center"></p>
+  </div>
+</div>
+
+<!-- App -->
+<div id="app" class="hidden max-w-5xl mx-auto px-5 pb-24">
+  <header class="pt-8 pb-6 flex items-center justify-between flex-wrap gap-4">
+    <div>
+      <h1 class="font-display text-3xl">Admin · Entre bicis <em class="italic text-marigold">y libros</em></h1>
+      <p class="text-crema-dim text-sm mt-1">Hola Paola — todo el club desde aquí.</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <a href="../index.html" class="btn btn-ghost">Ver la web</a>
+      <button id="logout" class="btn btn-ghost">Salir</button>
+    </div>
+  </header>
+
+  <div class="flex gap-2 mb-8 flex-wrap">
+    <button class="tab active" data-tab="eventos">Eventos</button>
+    <button class="tab" data-tab="miembros">Miembros</button>
+    <button class="tab" data-tab="libros">Libros</button>
+    <button class="tab" data-tab="stats">Resumen</button>
+  </div>
+
+  <!-- ═══ EVENTOS ═══ -->
+  <section id="tab-eventos">
+    <div class="bg-noche-surface border border-noche-line rounded-2xl sombra p-6 mb-8">
+      <h2 class="font-display text-xl mb-4">Nuevo evento</h2>
+      <div class="grid sm:grid-cols-2 gap-3">
+        <input id="e-title" placeholder="Título (ej. Encuentro de Noviembre) *" class="field sm:col-span-2">
+        <input id="e-location" placeholder="Lugar" class="field sm:col-span-2">
+        <input id="e-theme" placeholder="Temática del mes (ej. Realismo mágico)" class="field sm:col-span-2">
+        <label class="text-xs text-crema-dim">¿Cómo se elige el libro?
+          <select id="e-method" class="field mt-1">
+            <option value="raffle">Al azar — el cáliz 🔥</option>
+            <option value="vote">Por votación 🗳️</option>
+          </select>
+        </label>
+        <label class="text-xs text-crema-dim">Fecha del encuentro *<input id="e-date" type="datetime-local" class="field mt-1"></label>
+        <label id="e-raffle-wrap" class="text-xs text-crema-dim">Fecha de la rifa<input id="e-raffle" type="datetime-local" class="field mt-1"></label>
+        <label id="e-deadline-wrap" class="hidden text-xs text-crema-dim">Cierre de la votación<input id="e-deadline" type="datetime-local" class="field mt-1"></label>
+      </div>
+      <div class="mt-4 flex items-center gap-3">
+        <button id="e-create" class="btn btn-primary">Crear evento</button>
+        <span id="e-status" class="text-sm text-crema-dim"></span>
+      </div>
+    </div>
+    <div id="events-list" class="space-y-4"><p class="text-crema-dim">Cargando…</p></div>
+  </section>
+
+  <!-- ═══ MIEMBROS ═══ -->
+  <section id="tab-miembros" class="hidden">
+    <div class="bg-noche-surface border border-noche-line rounded-2xl sombra p-6 mb-8">
+      <h2 class="font-display text-xl mb-4">Nuevo miembro</h2>
+      <div class="grid sm:grid-cols-3 gap-3">
+        <input id="m-name" placeholder="Nombre *" class="field">
+        <input id="m-pin" placeholder="PIN (4-6 dígitos) *" inputmode="numeric" class="field">
+        <label class="text-xs text-crema-dim">Miembro desde<input id="m-joined" type="date" class="field mt-1"></label>
+      </div>
+      <div class="mt-4 flex items-center gap-3">
+        <button id="m-create" class="btn btn-primary">Crear miembro</button>
+        <span id="m-status" class="text-sm text-crema-dim"></span>
+      </div>
+    </div>
+    <div id="members-list" class="space-y-3"><p class="text-crema-dim">Cargando…</p></div>
+  </section>
+
+  <!-- ═══ LIBROS ═══ -->
+  <section id="tab-libros" class="hidden">
+    <div class="bg-noche-surface border border-noche-line rounded-2xl sombra p-6 mb-8">
+      <h2 class="font-display text-xl mb-1">Añadir libro leído</h2>
+      <p class="text-crema-dim text-sm mb-4">Para el historial: libros que el club ya leyó antes de tener la app.</p>
+      <div class="relative mb-3">
+        <input id="b-search" placeholder="Buscar en Open Library…" class="field pr-24">
+        <button id="b-search-btn" class="absolute right-2 top-1/2 -translate-y-1/2 btn btn-primary !py-1.5 !px-3">Buscar</button>
+      </div>
+      <div id="b-results" class="space-y-2 mb-3"></div>
+      <div class="grid sm:grid-cols-2 gap-3">
+        <input id="b-title" placeholder="Título *" class="field">
+        <input id="b-author" placeholder="Autor/a" class="field">
+        <input id="b-year" placeholder="Año" inputmode="numeric" class="field">
+        <input id="b-cover" placeholder="URL de portada" class="field">
+        <label class="text-xs text-crema-dim sm:col-span-2">Leído en (fecha del encuentro)<input id="b-readat" type="date" class="field mt-1"></label>
+      </div>
+      <div class="mt-4 flex items-center gap-3">
+        <button id="b-create" class="btn btn-primary">Añadir como leído</button>
+        <span id="b-status" class="text-sm text-crema-dim"></span>
+      </div>
+    </div>
+    <div id="books-list" class="space-y-3"><p class="text-crema-dim">Cargando…</p></div>
+  </section>
+
+  <!-- ═══ STATS ═══ -->
+  <section id="tab-stats" class="hidden">
+    <div id="stats-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-4"></div>
+  </section>
+</div>
+
+<!-- Confirm modal -->
+<div id="confirm-modal" class="hidden fixed inset-0 z-[70] items-center justify-center p-6 bg-noche-deep/80 backdrop-blur-sm">
+  <div class="bg-noche-surface border border-noche-line rounded-2xl sombra p-7 max-w-sm w-full">
+    <h3 id="cm-title" class="font-display text-xl mb-2"></h3>
+    <p id="cm-text" class="text-crema-dim text-sm mb-6"></p>
+    <div class="flex gap-3 justify-end">
+      <button id="cm-cancel" class="btn btn-ghost">Cancelar</button>
+      <button id="cm-ok" class="btn btn-primary"></button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[80] bg-crema text-noche font-bold text-sm px-5 py-3 rounded-xl shadow-xl"></div>
+
+<script>
+const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+  ? 'http://localhost:3001' : 'https://bookclub-api.onrender.com';
+let adminToken = localStorage.getItem('adminToken') || '';
+
+function esc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+function fmtDT(iso){ if(!iso) return '—'; const d = new Date(iso); return `${d.getDate()} ${MESES[d.getMonth()]} ${d.getFullYear()} · ${d.toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'})}`; }
+
+async function api(path, opts = {}) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...opts,
+    headers: { 'x-admin-token': adminToken, ...(opts.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }), ...(opts.headers || {}) },
+  });
+  const data = await res.json().catch(() => ({}));
+  if (res.status === 401) { showGate('Token inválido'); throw new Error('401'); }
+  if (!res.ok) throw new Error(data.error || 'Error');
+  return data;
+}
+
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.remove('hidden');
+  clearTimeout(t._h);
+  t._h = setTimeout(() => t.classList.add('hidden'), 2600);
+}
+
+// ── Confirm modal ──
+let pendingConfirm = null;
+function confirmAction(title, text, okLabel, fn){
+  document.getElementById('cm-title').textContent = title;
+  document.getElementById('cm-text').textContent = text;
+  document.getElementById('cm-ok').textContent = okLabel;
+  pendingConfirm = fn;
+  const m = document.getElementById('confirm-modal');
+  m.classList.remove('hidden'); m.classList.add('flex');
+}
+function closeConfirm(){
+  const m = document.getElementById('confirm-modal');
+  m.classList.add('hidden'); m.classList.remove('flex');
+  pendingConfirm = null;
+}
+document.getElementById('cm-cancel').addEventListener('click', closeConfirm);
+document.getElementById('cm-ok').addEventListener('click', () => { const fn = pendingConfirm; closeConfirm(); if (fn) fn(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeConfirm(); });
+
+// ── Gate ──
+function showGate(err){
+  document.getElementById('gate').classList.remove('hidden');
+  document.getElementById('app').classList.add('hidden');
+  if (err) { const g = document.getElementById('gate-error'); g.textContent = err; g.classList.remove('hidden'); }
+}
+async function tryEnter(){
+  try {
+    await api('/api/admin/stats');
+    document.getElementById('gate').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    loadAll();
+  } catch (e) { if (e.message !== '401') showGate(e.message); }
+}
+document.getElementById('gate-btn').addEventListener('click', () => {
+  adminToken = document.getElementById('gate-token').value.trim();
+  localStorage.setItem('adminToken', adminToken);
+  document.getElementById('gate-error').classList.add('hidden');
+  tryEnter();
+});
+document.getElementById('gate-token').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('gate-btn').click(); });
+document.getElementById('logout').addEventListener('click', () => { localStorage.removeItem('adminToken'); location.reload(); });
+
+// ── Tabs ──
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+  document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+  t.classList.add('active');
+  ['eventos','miembros','libros','stats'].forEach(name =>
+    document.getElementById(`tab-${name}`).classList.toggle('hidden', name !== t.dataset.tab));
+}));
+
+let members = [];
+
+function loadAll(){ loadEvents(); loadMembers(); loadBooks(); loadStats(); }
+
+// ═══ EVENTS ═══
+
+async function loadEvents(){
+  try {
+    const events = await api('/api/admin/events');
+    const list = document.getElementById('events-list');
+    if (!events.length) { list.innerHTML = '<p class="text-crema-dim">No hay eventos todavía.</p>'; return; }
+    const tag = e => {
+      if (e.status === 'planned') return e.selection_method === 'vote'
+        ? '<span class="text-xs px-2.5 py-1 rounded-full bg-orquidea/15 text-orquidea">votación abierta</span>'
+        : '<span class="text-xs px-2.5 py-1 rounded-full bg-marigold/15 text-marigold">propuestas abiertas</span>';
+      if (e.status === 'raffled') return e.selection_method === 'vote'
+        ? '<span class="text-xs px-2.5 py-1 rounded-full bg-caliz/15 text-caliz">decidido</span>'
+        : '<span class="text-xs px-2.5 py-1 rounded-full bg-caliz/15 text-caliz">rifado</span>';
+      if (e.status === 'completed') return '<span class="text-xs px-2.5 py-1 rounded-full bg-crema/10 text-crema-dim">completado</span>';
+      if (e.status === 'cancelled') return '<span class="text-xs px-2.5 py-1 rounded-full bg-orquidea/15 text-orquidea">cancelado</span>';
+      return '';
+    };
+
+    list.innerHTML = events.map(e => `
+      <details class="bg-noche-surface border border-noche-line rounded-2xl sombra">
+        <summary class="cursor-pointer p-5 flex items-center gap-4 flex-wrap">
+          <div class="flex-1 min-w-[200px]">
+            <p class="font-semibold">${esc(e.title)} <span class="text-xs text-crema-dim">${e.selection_method === 'vote' ? '🗳️' : '🔥'}</span></p>
+            <p class="text-sm text-crema-dim">${fmtDT(e.event_at)} · ${esc(e.location || 'sin lugar')}${e.theme ? ` · 🎭 ${esc(e.theme)}` : ''}</p>
+          </div>
+          ${e.winning_book ? `<span class="text-sm text-crema-dim">📖 ${esc(e.winning_book.title)}</span>` : `<span class="text-sm text-crema-dim">📝 ${e.suggestion_count} propuesta${e.suggestion_count === 1 ? '' : 's'}</span>`}
+          ${tag(e)}
+        </summary>
+        <div class="px-5 pb-5 border-t border-noche-line pt-4" data-event="${e.id}">
+          <div class="flex gap-2 flex-wrap mb-4">
+            ${e.status === 'planned' ? (e.selection_method === 'vote'
+              ? `<button class="btn btn-caliz act-close-vote" data-id="${e.id}" data-name="${esc(e.title)}" data-count="${e.suggestion_count}">🗳️ Cerrar votación</button>
+              <a class="btn btn-ghost" href="../votacion.html?id=${e.id}" target="_blank" rel="noopener">Abrir votación en vivo</a>`
+              : `<button class="btn btn-caliz act-draw" data-id="${e.id}" data-name="${esc(e.title)}" data-count="${e.suggestion_count}">🔥 Lanzar la rifa</button>
+              <a class="btn btn-ghost" href="../rifa.html?id=${e.id}" target="_blank" rel="noopener">Abrir cáliz en vivo</a>`) : ''}
+            ${e.status === 'raffled' ? `<button class="btn btn-ghost act-reading" data-id="${e.id}">Marcar "leyendo"</button>
+              <button class="btn btn-primary act-complete" data-id="${e.id}" data-name="${esc(e.title)}">Completar evento</button>` : ''}
+            ${e.status !== 'completed' ? `<button class="btn btn-danger act-delete" data-id="${e.id}" data-name="${esc(e.title)}">Eliminar</button>` : ''}
+          </div>
+          ${e.status !== 'completed' ? `
+          <div class="flex gap-2 items-center mb-4 flex-wrap">
+            <input class="field theme-input" style="max-width:16rem" placeholder="Temática del mes" value="${esc(e.theme || '')}">
+            <button class="btn btn-ghost act-theme" data-id="${e.id}">Guardar temática</button>
+          </div>` : ''}
+          <div class="grid md:grid-cols-2 gap-5">
+            <div>
+              <h4 class="text-xs uppercase tracking-wider text-crema-dim mb-2">Propuestas</h4>
+              <div class="sug-list text-sm text-crema-dim">Cargando…</div>
+            </div>
+            <div>
+              <h4 class="text-xs uppercase tracking-wider text-crema-dim mb-2">Asistencia</h4>
+              <div class="att-list grid grid-cols-2 gap-1.5 text-sm">${members.map(m => `
+                <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" value="${m.id}" ${e.attendee_ids?.includes(m.id) ? 'checked' : ''} class="accent-[#d9a441]">${esc(m.name)}</label>`).join('')}
+              </div>
+              <button class="btn btn-ghost mt-3 act-attendance" data-id="${e.id}">Guardar asistencia</button>
+            </div>
+          </div>
+        </div>
+      </details>`).join('');
+
+    // Lazy-load suggestions when an event is opened
+    list.querySelectorAll('details').forEach(d => d.addEventListener('toggle', async () => {
+      if (!d.open) return;
+      const id = d.querySelector('[data-event]').dataset.event;
+      const box = d.querySelector('.sug-list');
+      try {
+        const sugs = await api(`/api/admin/events/${id}/suggestions`);
+        box.innerHTML = sugs.length ? sugs.map(s => `
+          <div class="flex items-center gap-2 py-1">
+            ${s.book?.cover_url ? `<img src="${esc(s.book.cover_url)}" class="w-6 h-9 object-cover rounded" alt="">` : '<span class="w-6 h-9 bg-noche-deep rounded"></span>'}
+            <span class="text-crema">${esc(s.book?.title || '?')}</span>
+            <span class="text-crema-dim">— ${esc(s.member_name)}</span>
+            ${s.votes ? `<span class="ml-auto text-xs px-2 py-0.5 rounded-full bg-caliz/15 text-caliz whitespace-nowrap">${s.votes} voto${s.votes === 1 ? '' : 's'}</span>` : ''}
+          </div>`).join('') : '<p class="italic">sin propuestas aún</p>';
+      } catch { box.textContent = 'Error al cargar'; }
+    }, { once: false }));
+
+    // Actions
+    list.querySelectorAll('.act-draw').forEach(b => b.addEventListener('click', () => {
+      if (b.dataset.count === '0') return toast('No hay propuestas en el cáliz');
+      confirmAction('¿Lanzar la rifa?', `El cáliz elegirá un libro al azar para "${b.dataset.name}". No se puede deshacer.`, 'Lanzar 🔥', async () => {
+        try { const r = await api(`/api/admin/events/${b.dataset.id}/draw`, { method: 'POST' }); toast(`Salió: ${r.winner.book.title} 🎉`); loadEvents(); loadBooks(); }
+        catch (e) { toast(e.message); }
+      });
+    }));
+    list.querySelectorAll('.act-close-vote').forEach(b => b.addEventListener('click', () => {
+      if (b.dataset.count === '0') return toast('No hay propuestas en la papeleta');
+      confirmAction('¿Cerrar la votación?', `Se contarán los votos de "${b.dataset.name}". Si hay empate, se abre una segunda vuelta entre los empatados.`, 'Cerrar 🗳️', async () => {
+        try {
+          const r = await api(`/api/admin/events/${b.dataset.id}/close-vote`, { method: 'POST' });
+          if (r.runoff) toast(`¡Empate! Segunda vuelta entre ${r.candidates.length} libros (ronda ${r.round})`);
+          else toast(`Ganó: ${r.winner.book.title} 🎉`);
+          loadEvents(); loadBooks();
+        } catch (e) { toast(e.message); }
+      });
+    }));
+    list.querySelectorAll('.act-theme').forEach(b => b.addEventListener('click', async () => {
+      const input = b.closest('div').querySelector('.theme-input');
+      try {
+        await api(`/api/admin/events/${b.dataset.id}`, { method: 'PATCH', body: JSON.stringify({ theme: input.value.trim() || null }) });
+        toast('Temática guardada 🎭'); loadEvents();
+      } catch (e) { toast(e.message); }
+    }));
+    list.querySelectorAll('.act-reading').forEach(b => b.addEventListener('click', async () => {
+      try { await api(`/api/admin/events/${b.dataset.id}/start-reading`, { method: 'POST' }); toast('Libro marcado como "leyendo"'); loadBooks(); }
+      catch (e) { toast(e.message); }
+    }));
+    list.querySelectorAll('.act-complete').forEach(b => b.addEventListener('click', () => {
+      confirmAction('¿Completar evento?', `"${b.dataset.name}" pasará al historial y su libro quedará como leído.`, 'Completar', async () => {
+        try { await api(`/api/admin/events/${b.dataset.id}/complete`, { method: 'POST' }); toast('Evento completado 📚'); loadEvents(); loadBooks(); }
+        catch (e) { toast(e.message); }
+      });
+    }));
+    list.querySelectorAll('.act-delete').forEach(b => b.addEventListener('click', () => {
+      confirmAction('¿Eliminar evento?', `Se borrará "${b.dataset.name}" y sus propuestas.`, 'Eliminar', async () => {
+        try { await api(`/api/admin/events/${b.dataset.id}`, { method: 'DELETE' }); toast('Evento eliminado'); loadEvents(); }
+        catch (e) { toast(e.message); }
+      });
+    }));
+    list.querySelectorAll('.act-attendance').forEach(b => b.addEventListener('click', async () => {
+      const box = b.closest('[data-event]');
+      const ids = [...box.querySelectorAll('.att-list input:checked')].map(i => i.value);
+      try { await api(`/api/admin/events/${b.dataset.id}/attendance`, { method: 'PUT', body: JSON.stringify({ member_ids: ids }) }); toast(`Asistencia guardada (${ids.length})`); }
+      catch (e) { toast(e.message); }
+    }));
+  } catch (e) { if (e.message !== '401') console.error(e); }
+}
+
+// Toggle the raffle-date / vote-deadline fields with the selection method
+document.getElementById('e-method').addEventListener('change', () => {
+  const isVote = document.getElementById('e-method').value === 'vote';
+  document.getElementById('e-raffle-wrap').classList.toggle('hidden', isVote);
+  document.getElementById('e-deadline-wrap').classList.toggle('hidden', !isVote);
+});
+
+document.getElementById('e-create').addEventListener('click', async () => {
+  const s = document.getElementById('e-status');
+  try {
+    const title = document.getElementById('e-title').value.trim();
+    const event_at = document.getElementById('e-date').value;
+    if (!title || !event_at) { s.textContent = 'Título y fecha son obligatorios'; return; }
+    const method = document.getElementById('e-method').value;
+    await api('/api/admin/events', { method: 'POST', body: JSON.stringify({
+      title, location: document.getElementById('e-location').value.trim() || null,
+      theme: document.getElementById('e-theme').value.trim() || null,
+      selection_method: method,
+      event_at: new Date(event_at).toISOString(),
+      raffle_at: method === 'raffle' && document.getElementById('e-raffle').value ? new Date(document.getElementById('e-raffle').value).toISOString() : null,
+      vote_deadline: method === 'vote' && document.getElementById('e-deadline').value ? new Date(document.getElementById('e-deadline').value).toISOString() : null,
+    })});
+    ['e-title','e-location','e-theme','e-date','e-raffle','e-deadline'].forEach(id => document.getElementById(id).value = '');
+    s.textContent = ''; toast('Evento creado 🗓️'); loadEvents();
+  } catch (e) { s.textContent = e.message; }
+});
+
+// ═══ MEMBERS ═══
+
+async function loadMembers(){
+  try {
+    members = await api('/api/admin/members');
+    const list = document.getElementById('members-list');
+    list.innerHTML = members.map(m => `
+      <div class="bg-noche-surface border border-noche-line rounded-2xl sombra p-4 flex items-center gap-4 flex-wrap ${m.is_active ? '' : 'opacity-50'}">
+        <span class="w-10 h-10 rounded-full flex items-center justify-center font-display font-semibold text-noche-deep" style="background:${esc(m.avatar_color || '#d9a441')}">${esc(m.name[0])}</span>
+        <div class="flex-1 min-w-[140px]">
+          <p class="font-semibold">${esc(m.name)}${m.is_active ? '' : ' <span class="text-xs text-crema-dim">(inactivo)</span>'}</p>
+          <p class="text-xs text-crema-dim">desde ${m.joined_at}</p>
+        </div>
+        <button class="btn btn-ghost act-pin" data-id="${m.id}" data-name="${esc(m.name)}">Nuevo PIN</button>
+        ${m.is_active
+          ? `<button class="btn btn-danger act-off" data-id="${m.id}" data-name="${esc(m.name)}">Desactivar</button>`
+          : `<button class="btn btn-ghost act-on" data-id="${m.id}">Reactivar</button>`}
+      </div>`).join('');
+
+    list.querySelectorAll('.act-pin').forEach(b => b.addEventListener('click', () => {
+      const pin = String(Math.floor(1000 + Math.random() * 9000));
+      confirmAction(`Nuevo PIN para ${b.dataset.name}`, `Se generará el PIN ${pin}. Apúntalo y compárteselo — no se puede ver después.`, 'Cambiar PIN', async () => {
+        try { await api(`/api/admin/members/${b.dataset.id}`, { method: 'PATCH', body: JSON.stringify({ pin }) }); toast(`PIN de ${b.dataset.name}: ${pin}`); }
+        catch (e) { toast(e.message); }
+      });
+    }));
+    list.querySelectorAll('.act-off').forEach(b => b.addEventListener('click', () => {
+      confirmAction('¿Desactivar miembro?', `${b.dataset.name} dejará de aparecer en la app. Su historial se conserva.`, 'Desactivar', async () => {
+        try { await api(`/api/admin/members/${b.dataset.id}`, { method: 'DELETE' }); toast('Miembro desactivado'); loadMembers(); }
+        catch (e) { toast(e.message); }
+      });
+    }));
+    list.querySelectorAll('.act-on').forEach(b => b.addEventListener('click', async () => {
+      try { await api(`/api/admin/members/${b.dataset.id}`, { method: 'PATCH', body: JSON.stringify({ is_active: true }) }); toast('Miembro reactivado'); loadMembers(); }
+      catch (e) { toast(e.message); }
+    }));
+  } catch (e) { if (e.message !== '401') console.error(e); }
+}
+
+document.getElementById('m-create').addEventListener('click', async () => {
+  const s = document.getElementById('m-status');
+  try {
+    const name = document.getElementById('m-name').value.trim();
+    const pin = document.getElementById('m-pin').value.trim();
+    if (!name || !pin) { s.textContent = 'Nombre y PIN son obligatorios'; return; }
+    await api('/api/admin/members', { method: 'POST', body: JSON.stringify({
+      name, pin, joined_at: document.getElementById('m-joined').value || undefined,
+    })});
+    ['m-name','m-pin','m-joined'].forEach(id => document.getElementById(id).value = '');
+    s.textContent = ''; toast(`${name} ya es del club 💛`); loadMembers(); loadEvents();
+  } catch (e) { s.textContent = e.message; }
+});
+
+// ═══ BOOKS ═══
+
+async function loadBooks(){
+  try {
+    const books = await api('/api/admin/books');
+    const list = document.getElementById('books-list');
+    const visible = books.filter(b => b.status !== 'suggested');
+    if (!visible.length) { list.innerHTML = '<p class="text-crema-dim">No hay libros todavía.</p>'; return; }
+    const tag = s => ({
+      picked:  '<span class="text-xs px-2 py-0.5 rounded-full bg-marigold/15 text-marigold">elegido</span>',
+      reading: '<span class="text-xs px-2 py-0.5 rounded-full bg-caliz/15 text-caliz">leyendo</span>',
+      read:    '<span class="text-xs px-2 py-0.5 rounded-full bg-crema/10 text-crema-dim">leído</span>',
+    }[s] || '');
+    list.innerHTML = visible.map(b => `
+      <div class="bg-noche-surface border border-noche-line rounded-2xl sombra p-4 flex items-center gap-4 flex-wrap">
+        ${b.cover_url ? `<img src="${esc(b.cover_url)}" class="w-10 h-15 object-cover rounded" style="height:3.75rem" alt="">` : '<span class="w-10 bg-noche-deep rounded" style="height:3.75rem"></span>'}
+        <div class="flex-1 min-w-[180px]">
+          <p class="font-semibold">${esc(b.title)} ${tag(b.status)}</p>
+          <p class="text-xs text-crema-dim">${esc(b.author || '')}${b.read_at ? ` · leído ${b.read_at}` : ''}${b.avg_score !== null ? ` · ⭐ ${b.avg_score}/10 (${b.rating_count})` : ''}</p>
+        </div>
+        <label class="btn btn-ghost cursor-pointer">${b.has_pdf ? 'Reemplazar PDF' : 'Subir PDF'}<input type="file" accept="application/pdf" class="hidden pdf-input" data-id="${b.id}"></label>
+        ${b.has_pdf ? '<span class="text-xs text-caliz">📄 PDF ✓</span>' : ''}
+        <button class="btn btn-danger act-delbook" data-id="${b.id}" data-name="${esc(b.title)}">Eliminar</button>
+      </div>`).join('');
+
+    list.querySelectorAll('.pdf-input').forEach(inp => inp.addEventListener('change', async () => {
+      if (!inp.files[0]) return;
+      const fd = new FormData();
+      fd.append('file', inp.files[0]);
+      toast('Subiendo PDF…');
+      try { await api(`/api/admin/books/${inp.dataset.id}/pdf`, { method: 'POST', body: fd }); toast('PDF subido 📄'); loadBooks(); }
+      catch (e) { toast(e.message); }
+    }));
+    list.querySelectorAll('.act-delbook').forEach(b => b.addEventListener('click', () => {
+      confirmAction('¿Eliminar libro?', `Se borrará "${b.dataset.name}", su PDF y sus puntuaciones.`, 'Eliminar', async () => {
+        try { await api(`/api/admin/books/${b.dataset.id}`, { method: 'DELETE' }); toast('Libro eliminado'); loadBooks(); }
+        catch (e) { toast(e.message); }
+      });
+    }));
+  } catch (e) { if (e.message !== '401') console.error(e); }
+}
+
+document.getElementById('b-search-btn').addEventListener('click', async () => {
+  const q = document.getElementById('b-search').value.trim();
+  if (!q) return;
+  const box = document.getElementById('b-results');
+  box.innerHTML = '<p class="text-crema-dim text-sm">Buscando…</p>';
+  try {
+    const res = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&limit=5&fields=title,author_name,first_publish_year,cover_i,isbn`);
+    const data = await res.json();
+    if (!data.docs?.length) { box.innerHTML = '<p class="text-crema-dim text-sm">Nada encontrado.</p>'; return; }
+    box.innerHTML = data.docs.map((d, i) => `
+      <button class="result w-full flex items-center gap-3 bg-noche-deep border border-noche-line rounded-xl p-2.5 text-left hover:border-marigold/50" data-i="${i}">
+        ${d.cover_i ? `<img src="https://covers.openlibrary.org/b/id/${d.cover_i}-S.jpg" class="w-8 h-12 object-cover rounded" alt="">` : '<span class="w-8 h-12 bg-noche-surface rounded"></span>'}
+        <span class="min-w-0"><span class="block text-sm font-semibold truncate">${esc(d.title)}</span>
+        <span class="block text-xs text-crema-dim truncate">${esc((d.author_name || []).join(', '))}${d.first_publish_year ? ` · ${d.first_publish_year}` : ''}</span></span>
+      </button>`).join('');
+    box.querySelectorAll('.result').forEach(btn => btn.addEventListener('click', () => {
+      const d = data.docs[Number(btn.dataset.i)];
+      document.getElementById('b-title').value = d.title;
+      document.getElementById('b-author').value = (d.author_name || [])[0] || '';
+      document.getElementById('b-year').value = d.first_publish_year || '';
+      document.getElementById('b-cover').value = d.cover_i ? `https://covers.openlibrary.org/b/id/${d.cover_i}-L.jpg` : '';
+      box.innerHTML = '';
+    }));
+  } catch { box.innerHTML = '<p class="text-orquidea text-sm">No se pudo buscar.</p>'; }
+});
+document.getElementById('b-search').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('b-search-btn').click(); });
+
+document.getElementById('b-create').addEventListener('click', async () => {
+  const s = document.getElementById('b-status');
+  try {
+    const title = document.getElementById('b-title').value.trim();
+    if (!title) { s.textContent = 'El título es obligatorio'; return; }
+    await api('/api/admin/books', { method: 'POST', body: JSON.stringify({
+      title,
+      author: document.getElementById('b-author').value.trim() || null,
+      year: document.getElementById('b-year').value.trim() || null,
+      cover_url: document.getElementById('b-cover').value.trim() || null,
+      status: 'read',
+      read_at: document.getElementById('b-readat').value || null,
+    })});
+    ['b-title','b-author','b-year','b-cover','b-readat'].forEach(id => document.getElementById(id).value = '');
+    s.textContent = ''; toast('Libro añadido 📚'); loadBooks();
+  } catch (e) { s.textContent = e.message; }
+});
+
+// ═══ STATS ═══
+
+async function loadStats(){
+  try {
+    const s = await api('/api/admin/stats');
+    const tile = (num, label) => `
+      <div class="bg-noche-surface border border-noche-line rounded-2xl sombra p-5 text-center">
+        <p class="font-display text-4xl font-semibold text-marigold">${num}</p>
+        <p class="text-xs uppercase tracking-wider text-crema-dim mt-1">${label}</p>
+      </div>`;
+    document.getElementById('stats-grid').innerHTML =
+      tile(s.members, 'miembros') + tile(s.books_read, 'libros leídos') +
+      tile(s.events_completed, 'encuentros hechos') + tile(s.events_upcoming, 'eventos abiertos') +
+      tile(s.suggestions, 'propuestas totales') + tile(s.ratings, 'puntuaciones');
+  } catch (e) { if (e.message !== '401') console.error(e); }
+}
+
+// ── Boot ──
+if (adminToken) tryEnter(); else showGate();
+</script>
+</body>
+</html>

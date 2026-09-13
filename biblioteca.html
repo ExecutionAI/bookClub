@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Biblioteca — Entre bicis y libros</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: { extend: {
+    colors: {
+      noche: { DEFAULT:'#1e1533', deep:'#150e24', surface:'#2a1f47', line:'#3d2f61' },
+      crema: { DEFAULT:'#f7f0e6', dim:'#b5a9cf' },
+      marigold: '#d9a441',
+      orquidea: '#c9679a',
+      caliz: '#f5c96b',
+    },
+    fontFamily: { display:['Fraunces','Georgia','serif'], body:['Karla','system-ui','sans-serif'] },
+  }}
+};
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Karla:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
+<style>
+  body { font-family:'Karla',system-ui,sans-serif; }
+  .font-display { font-family:'Fraunces',Georgia,serif; }
+  .grain::before {
+    content:''; position:fixed; inset:0; pointer-events:none; z-index:50; opacity:.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  }
+  .sombra { box-shadow: 0 1px 2px rgba(10,6,20,.55), 0 10px 30px -10px rgba(10,6,20,.7), 0 24px 60px -20px rgba(217,164,65,.08); }
+  .sombra-crema { box-shadow: 0 2px 4px rgba(10,6,20,.4), 0 12px 32px -8px rgba(10,6,20,.55), 0 0 0 1px rgba(247,240,230,.06); }
+  :focus-visible { outline:2px solid #d9a441; outline-offset:2px; border-radius:4px; }
+  .cover-wrap { position:relative; overflow:hidden; border-radius:0.75rem; background:#2a1f47; }
+  .cover-wrap::after { content:''; position:absolute; inset:0; background:linear-gradient(160deg, rgba(245,201,107,.12), rgba(30,21,51,.28) 55%, rgba(201,103,154,.18)); mix-blend-mode:multiply; pointer-events:none; }
+  .book-card { transition:transform .25s cubic-bezier(.34,1.56,.64,1); }
+  .book-card:hover { transform:translateY(-5px) rotate(-.7deg); }
+  .nav-link { padding:.35rem .7rem; border-radius:9999px; color:#b5a9cf; transition:color .15s ease; }
+  .nav-link:hover { color:#f7f0e6; }
+  .nav-link.active { color:#f7f0e6; background:#2a1f47; }
+  /* score slider */
+  input[type=range] { -webkit-appearance:none; width:100%; height:6px; border-radius:3px; background:linear-gradient(to right, #d9a441 var(--fill,50%), #3d2f61 var(--fill,50%)); outline-offset:4px; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:26px; height:26px; border-radius:50%; background:#f7f0e6; border:3px solid #d9a441; cursor:pointer; box-shadow:0 2px 8px rgba(10,6,20,.6); }
+  input[type=range]::-moz-range-thumb { width:22px; height:22px; border-radius:50%; background:#f7f0e6; border:3px solid #d9a441; cursor:pointer; }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none!important; transition:none!important; } }
+</style>
+</head>
+<body class="grain bg-noche-deep text-crema min-h-screen">
+
+<nav class="sticky top-0 z-40 bg-noche-deep/85 backdrop-blur border-b border-noche-line">
+  <div class="max-w-5xl mx-auto px-5 h-14 flex items-center justify-between gap-3">
+    <a href="index.html" class="font-display text-lg whitespace-nowrap flex items-center gap-2">
+      <svg class="w-5 h-5 text-marigold shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6L5.6 18.4" opacity=".55"/></svg>
+      Entre bicis <em class="italic text-marigold">y libros</em>
+    </a>
+    <div class="flex items-center gap-1 text-sm overflow-x-auto">
+      <a class="nav-link" href="index.html">Inicio</a>
+      <a class="nav-link active" href="biblioteca.html">Biblioteca</a>
+      <a class="nav-link" href="ranking.html">Ranking</a>
+      <a class="nav-link" href="reglas.html">Reglas</a>
+      <a class="nav-link flex items-center gap-2" href="perfil.html"><span id="nav-avatar" class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-noche-deep" style="background:#d9a441"></span><span class="hidden sm:inline" id="nav-name"></span></a>
+    </div>
+  </div>
+</nav>
+
+<main class="max-w-5xl mx-auto px-5 pb-24">
+  <header class="pt-12 pb-8">
+    <p class="uppercase tracking-[0.3em] text-xs text-crema-dim mb-3">la estantería del club</p>
+    <h1 class="font-display text-4xl sm:text-5xl font-semibold">Biblioteca</h1>
+    <p class="mt-3 text-crema-dim max-w-lg">Todo lo que hemos leído juntos. Toca un libro para puntuarlo, dejar tu nota privada o descargar el PDF.</p>
+  </header>
+
+  <div id="books-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-10">
+    <p class="col-span-full text-crema-dim py-8">Cargando…</p>
+  </div>
+</main>
+
+<!-- Book modal -->
+<div id="modal" class="hidden fixed inset-0 z-[60] items-center justify-center p-4 bg-noche-deep/80 backdrop-blur-sm">
+  <div class="bg-noche-surface border border-noche-line rounded-2xl sombra max-w-lg w-full max-h-[90vh] overflow-y-auto">
+    <div class="p-6 sm:p-8">
+      <div class="flex gap-5">
+        <div id="m-cover" class="w-28 shrink-0"></div>
+        <div class="flex-1 min-w-0">
+          <h2 id="m-title" class="font-display text-2xl font-semibold leading-tight"></h2>
+          <p id="m-author" class="text-crema-dim mt-1"></p>
+          <p id="m-avg" class="mt-3"></p>
+          <div id="m-pdf" class="mt-4"></div>
+        </div>
+        <button id="m-close" aria-label="Cerrar" class="self-start text-crema-dim hover:text-crema text-2xl leading-none">×</button>
+      </div>
+      <p id="m-desc" class="mt-5 text-sm text-crema-dim leading-relaxed"></p>
+
+      <div class="mt-7 border-t border-noche-line pt-6">
+        <div class="flex items-baseline justify-between mb-4">
+          <h3 class="text-sm uppercase tracking-[0.2em] text-crema-dim">Tu nota</h3>
+          <p class="font-display text-4xl font-semibold text-marigold"><span id="m-score">–</span><span class="text-base text-crema-dim font-body"> / 10</span></p>
+        </div>
+        <input id="m-slider" type="range" min="0" max="10" step="0.5" value="5" aria-label="Tu puntuación de 0 a 10">
+        <div class="flex justify-between text-[10px] text-crema-dim mt-1"><span>0</span><span>5</span><span>10</span></div>
+        <textarea id="m-note" rows="3" placeholder="Tu nota privada sobre el libro (solo tú la ves)…"
+          class="mt-5 w-full bg-noche-deep border border-noche-line rounded-xl p-3 text-sm placeholder:text-crema-dim/60 focus:border-marigold/60 focus:outline-none resize-none"></textarea>
+        <div class="mt-4 flex items-center gap-3">
+          <button id="m-save" class="px-5 py-2.5 rounded-xl bg-marigold text-noche-deep font-bold text-sm hover:brightness-110 active:scale-[.98] transition-[filter]">Guardar</button>
+          <span id="m-status" class="text-sm text-crema-dim"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+  ? 'http://localhost:3001' : 'https://bookclub-api.onrender.com';
+const token = localStorage.getItem('bcToken');
+const me = (() => { try { return JSON.parse(localStorage.getItem('bcMember')); } catch { return null; } })();
+if (!token) location.href = 'login.html';
+
+async function api(path, opts = {}) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...opts,
+    headers: { 'x-member-token': token, 'Content-Type': 'application/json', ...(opts.headers || {}) },
+  });
+  if (res.status === 401) { localStorage.removeItem('bcToken'); localStorage.removeItem('bcMember'); location.href = 'login.html'; throw new Error('401'); }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Error de conexión');
+  return data;
+}
+function esc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+if (me) {
+  document.getElementById('nav-avatar').textContent = me.name[0];
+  document.getElementById('nav-avatar').style.background = me.avatar_color || '#d9a441';
+  document.getElementById('nav-name').textContent = me.name;
+}
+
+let books = [];
+let current = null;
+
+async function load(){
+  try {
+    books = await api('/api/books');
+    render();
+    const openId = new URLSearchParams(location.search).get('abrir');
+    if (openId) {
+      const b = books.find(x => x.id === openId);
+      if (b) openModal(b);
+    }
+  } catch (err) { if (err.message !== '401') console.error(err); }
+}
+
+function render(){
+  const grid = document.getElementById('books-grid');
+  if (!books.length) {
+    grid.innerHTML = '<p class="col-span-full text-crema-dim py-8">La estantería está vacía todavía. El primer libro llegará con la primera rifa ✨</p>';
+    return;
+  }
+  grid.innerHTML = books.map(b => `
+    <button class="book-card text-left" data-id="${b.id}">
+      <div class="cover-wrap sombra-crema">
+        ${b.status === 'reading' ? '<span class="absolute top-2 left-2 z-10 text-[10px] uppercase tracking-widest bg-caliz/90 text-noche-deep font-bold px-2 py-0.5 rounded-full">leyendo</span>' : ''}
+        ${b.cover_url ? `<img src="${esc(b.cover_url)}" alt="${esc(b.title)}" class="w-full aspect-[2/3] object-cover" loading="lazy">` : `<div class="w-full aspect-[2/3] flex items-center justify-center font-display text-center p-3 text-crema-dim text-sm">${esc(b.title)}</div>`}
+        <div class="absolute bottom-0 inset-x-0 bg-noche-deep/85 backdrop-blur-sm px-3 py-2 z-10 flex items-center justify-between">
+          ${b.avg_score !== null ? `<span><span class="font-display font-semibold text-marigold">${b.avg_score}</span><span class="text-crema-dim text-xs"> / 10</span></span>` : '<span class="text-crema-dim text-xs">sin notas</span>'}
+          ${b.has_pdf ? '<span title="PDF disponible" class="text-xs">📄</span>' : ''}
+        </div>
+      </div>
+      <p class="mt-3 text-sm font-semibold leading-snug">${esc(b.title)}</p>
+      <p class="text-xs text-crema-dim">${esc(b.author || '')}${b.year ? ` · ${b.year}` : ''}</p>
+      ${b.my_score !== null ? `<p class="text-xs text-caliz mt-1">tu nota: ${b.my_score}</p>` : ''}
+    </button>`).join('');
+  grid.querySelectorAll('.book-card').forEach(el =>
+    el.addEventListener('click', () => openModal(books.find(x => x.id === el.dataset.id))));
+}
+
+const modal = document.getElementById('modal');
+const slider = document.getElementById('m-slider');
+
+function updateSliderUI(){
+  document.getElementById('m-score').textContent = Number(slider.value) % 1 === 0 ? String(Number(slider.value)) : slider.value;
+  slider.style.setProperty('--fill', `${(slider.value / 10) * 100}%`);
+}
+slider.addEventListener('input', updateSliderUI);
+
+async function openModal(b){
+  current = b;
+  document.getElementById('m-title').textContent = b.title;
+  document.getElementById('m-author').textContent = [b.author, b.year].filter(Boolean).join(' · ');
+  document.getElementById('m-cover').innerHTML = `<div class="cover-wrap sombra-crema">${b.cover_url ? `<img src="${esc(b.cover_url)}" alt="" class="w-28 h-40 object-cover">` : `<div class="w-28 h-40"></div>`}</div>`;
+  document.getElementById('m-avg').innerHTML = b.avg_score !== null
+    ? `<span class="font-display text-xl font-semibold text-marigold">${b.avg_score}</span><span class="text-crema-dim text-sm"> / 10 · nota del club (${b.rating_count} voto${b.rating_count === 1 ? '' : 's'})</span>`
+    : '<span class="text-crema-dim text-sm">nadie lo ha puntuado todavía — sé la primera ✨</span>';
+  document.getElementById('m-desc').textContent = b.description || '';
+  document.getElementById('m-status').textContent = '';
+  document.getElementById('m-pdf').innerHTML = b.has_pdf
+    ? `<button id="m-download" class="px-4 py-2 rounded-xl border border-caliz/40 text-caliz text-sm font-bold hover:bg-caliz/10 active:scale-[.98]">Descargar PDF ↓</button>`
+    : '<span class="text-xs text-crema-dim">PDF no disponible aún</span>';
+
+  slider.value = b.my_score !== null ? b.my_score : 5;
+  updateSliderUI();
+  document.getElementById('m-score').textContent = b.my_score !== null ? String(b.my_score) : '–';
+
+  // Load my note fresh from profile data
+  document.getElementById('m-note').value = '';
+  api('/api/me').then(meData => {
+    const mine = (meData.books || []).find(x => x.id === b.id);
+    if (mine?.my_note) document.getElementById('m-note').value = mine.my_note;
+  }).catch(() => {});
+
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+
+  const dl = document.getElementById('m-download');
+  if (dl) dl.addEventListener('click', async () => {
+    try {
+      const { url } = await api(`/api/books/${b.id}/pdf-url`);
+      window.open(url.startsWith('http') ? url : `${API_BASE}${url}`, '_blank');
+    } catch (e) { document.getElementById('m-status').textContent = e.message; }
+  });
+}
+
+function closeModal(){
+  modal.classList.add('hidden');
+  modal.classList.remove('flex');
+  current = null;
+  history.replaceState(null, '', location.pathname);
+}
+document.getElementById('m-close').addEventListener('click', closeModal);
+modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal(); });
+
+document.getElementById('m-save').addEventListener('click', async () => {
+  if (!current) return;
+  const status = document.getElementById('m-status');
+  status.textContent = 'Guardando…';
+  try {
+    await api(`/api/books/${current.id}/rating`, {
+      method: 'PUT',
+      body: JSON.stringify({ score: Number(slider.value), note: document.getElementById('m-note').value.trim() || null }),
+    });
+    status.textContent = 'Guardado ✓';
+    books = await api('/api/books');
+    render();
+  } catch (e) { status.textContent = e.message; }
+});
+
+load();
+</script>
+</body>
+</html>

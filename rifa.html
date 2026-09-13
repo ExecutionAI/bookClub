@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>La Rifa — Entre bicis y libros</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: { extend: {
+    colors: {
+      noche: { DEFAULT:'#1e1533', deep:'#150e24', surface:'#2a1f47', line:'#3d2f61' },
+      crema: { DEFAULT:'#f7f0e6', dim:'#b5a9cf' },
+      marigold: '#d9a441',
+      orquidea: '#c9679a',
+      caliz: '#f5c96b',
+    },
+    fontFamily: { display:['Fraunces','Georgia','serif'], body:['Karla','system-ui','sans-serif'] },
+  }}
+};
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Karla:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
+<style>
+  body { font-family:'Karla',system-ui,sans-serif; overflow:hidden; }
+  .font-display { font-family:'Fraunces',Georgia,serif; }
+  :focus-visible { outline:2px solid #f5c96b; outline-offset:2px; border-radius:4px; }
+
+  /* ── the goblet ── */
+  .goblet-bowl {
+    width:15rem; height:6.5rem; margin:0 auto;
+    border-radius:0 0 8rem 8rem;
+    background:linear-gradient(180deg, #4a3872 0%, #2a1f47 45%, #150e24 100%);
+    border-top:3px solid rgba(247,240,230,.35);
+    box-shadow: inset 0 -14px 28px rgba(0,0,0,.55), inset 0 6px 14px rgba(245,201,107,.15), 0 10px 40px rgba(245,201,107,.12);
+  }
+  .goblet-stem { width:1.6rem; height:4.5rem; margin:0 auto; background:linear-gradient(90deg,#150e24,#4a3872 50%,#150e24); }
+  .goblet-base { width:9rem; height:1.1rem; margin:0 auto; border-radius:50%; background:linear-gradient(180deg,#4a3872,#150e24); box-shadow:0 6px 24px rgba(0,0,0,.6); }
+
+  /* ── golden fire ── */
+  .fire { position:absolute; bottom:100%; left:50%; transform:translateX(-50%); width:16rem; height:20rem; pointer-events:none; }
+  .flame { position:absolute; bottom:-1.2rem; left:50%; transform-origin:50% 100%; border-radius:50% 50% 30% 30% / 60% 60% 25% 25%; }
+  .flame-outer { width:11rem; height:15rem; margin-left:-5.5rem; background:radial-gradient(ellipse at 50% 85%, rgba(217,164,65,.75), rgba(160,90,30,.35) 55%, transparent 75%); filter:blur(14px); animation:flicker 2.8s ease-in-out infinite; }
+  .flame-mid { width:7.5rem; height:11rem; margin-left:-3.75rem; background:radial-gradient(ellipse at 50% 85%, rgba(255,214,138,.9), rgba(245,201,107,.45) 60%, transparent 78%); filter:blur(8px); animation:flicker 2.1s ease-in-out infinite reverse; }
+  .flame-core { width:4rem; height:6.5rem; margin-left:-2rem; background:radial-gradient(ellipse at 50% 88%, rgba(255,248,230,.95), rgba(255,222,150,.55) 62%, transparent 80%); filter:blur(5px); animation:flicker 1.5s ease-in-out infinite; }
+  @keyframes flicker {
+    0%,100% { transform:scaleY(1) scaleX(1) skewX(0deg); }
+    25%     { transform:scaleY(1.12) scaleX(.94) skewX(-2.5deg); }
+    50%     { transform:scaleY(.94) scaleX(1.05) skewX(1.5deg); }
+    75%     { transform:scaleY(1.08) scaleX(.96) skewX(2.5deg); }
+  }
+  .glow { position:absolute; bottom:20%; left:50%; transform:translate(-50%,0); width:34rem; height:34rem; background:radial-gradient(circle, rgba(240,190,90,.22), rgba(240,190,90,.06) 45%, transparent 70%); animation:pulse 3.5s ease-in-out infinite; pointer-events:none; }
+  @keyframes pulse { 0%,100% { opacity:.8; transform:translate(-50%,0) scale(1); } 50% { opacity:1; transform:translate(-50%,0) scale(1.08); } }
+
+  .surging .flame-outer { animation-duration:.9s; }
+  .surging .flame-mid   { animation-duration:.65s; }
+  .surging .flame-core  { animation-duration:.45s; }
+  .surging .fire { transform:translateX(-50%) scale(1.35); transition:transform 1.2s ease; }
+  .surging .glow { animation-duration:1s; }
+
+  .papelito {
+    position:absolute; padding:.28rem .5rem; background:#f7f0e6; color:#1e1533;
+    border-radius:2px; font-size:.62rem; font-weight:700; letter-spacing:.02em;
+    box-shadow:0 2px 8px rgba(0,0,0,.45), 0 0 12px rgba(245,201,107,.25);
+    white-space:nowrap; will-change:transform;
+  }
+  .ember { position:absolute; width:4px; height:4px; border-radius:50%; background:#ffd98a; filter:blur(1px); will-change:transform,opacity; }
+  .confeti { position:fixed; top:-4vh; border-radius:1px; will-change:transform,opacity; z-index:80; }
+
+  @keyframes card-in { from { transform:scale(.55) rotate(-4deg); opacity:0; } to { transform:scale(1) rotate(0); opacity:1; } }
+  .card-in { animation:card-in .8s cubic-bezier(.34,1.56,.64,1) forwards; }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none!important; transition:none!important; } }
+</style>
+</head>
+<body class="bg-noche-deep text-crema min-h-screen">
+
+<a id="back" href="#" class="fixed top-4 left-4 z-[70] text-crema-dim text-sm hover:text-crema bg-noche-deep/60 backdrop-blur px-3 py-1.5 rounded-full">← evento</a>
+
+<!-- deep night vignette -->
+<div class="fixed inset-0 pointer-events-none" style="background:radial-gradient(ellipse at 50% 100%, transparent 30%, rgba(10,6,20,.8) 90%)"></div>
+
+<!-- Stage -->
+<div id="stage" class="fixed inset-0 flex flex-col items-center justify-end pb-[8vh]">
+  <div class="glow"></div>
+
+  <!-- header floats above -->
+  <div id="header" class="absolute top-[7vh] inset-x-0 text-center px-6 z-10">
+    <p class="uppercase tracking-[0.35em] text-xs text-caliz/80 mb-3">la rifa</p>
+    <h1 id="event-title" class="font-display text-3xl sm:text-5xl font-semibold"></h1>
+    <p id="status-line" class="mt-3 text-crema-dim italic font-display">encendiendo el cáliz…</p>
+  </div>
+
+  <!-- goblet + fire + papers -->
+  <div id="goblet-zone" class="relative z-10">
+    <div class="relative">
+      <div class="fire">
+        <div class="flame flame-outer"></div>
+        <div class="flame flame-mid"></div>
+        <div class="flame flame-core"></div>
+        <div id="papers" class="absolute inset-0"></div>
+        <div id="embers" class="absolute inset-0"></div>
+      </div>
+      <div class="goblet-bowl"></div>
+      <div class="goblet-stem"></div>
+      <div class="goblet-base"></div>
+    </div>
+    <p id="counter" class="mt-6 text-center text-sm text-crema-dim"></p>
+  </div>
+</div>
+
+<!-- Winner card (hidden until reveal) -->
+<div id="winner-overlay" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-6">
+  <div id="winner-card" class="bg-crema text-noche rounded-2xl p-8 max-w-sm w-full text-center" style="box-shadow:0 0 80px rgba(245,201,107,.35), 0 24px 60px rgba(10,6,20,.8)">
+    <p class="text-xs uppercase tracking-[0.3em] text-orquidea mb-5">el cáliz ha hablado</p>
+    <div id="w-cover" class="w-36 mx-auto rounded-lg overflow-hidden shadow-xl mb-5"></div>
+    <h2 id="w-title" class="font-display text-3xl font-semibold leading-tight"></h2>
+    <p id="w-author" class="text-noche/70 mt-2"></p>
+    <p id="w-by" class="mt-4 text-sm"></p>
+    <a id="w-link" href="#" class="mt-6 inline-block px-6 py-3 rounded-xl bg-noche text-crema font-bold text-sm hover:bg-noche-surface active:scale-[.98]">Ver evento</a>
+  </div>
+</div>
+
+<script>
+const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+  ? 'http://localhost:3001' : 'https://bookclub-api.onrender.com';
+const token = localStorage.getItem('bcToken');
+if (!token) location.href = 'login.html';
+
+const eventId = new URLSearchParams(location.search).get('id');
+if (!eventId) location.href = 'index.html';
+document.getElementById('back').href = `evento.html?id=${eventId}`;
+document.getElementById('w-link').href = `evento.html?id=${eventId}`;
+
+function esc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+let state = 'idle';   // idle | drawing | done
+let entries = [];
+let pollTimer = null;
+
+async function poll(){
+  try {
+    const res = await fetch(`${API_BASE}/api/events/${eventId}/raffle`, { headers: { 'x-member-token': token } });
+    if (res.status === 401) { location.href = 'login.html'; return; }
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Error');
+
+    document.getElementById('event-title').textContent = data.event_title || '';
+
+    if (data.selection_method === 'vote') { location.href = `votacion.html?id=${eventId}`; return; }
+
+    if (data.state === 'open') {
+      document.getElementById('status-line').textContent = data.suggestion_count
+        ? 'el fuego dorado custodia las propuestas…'
+        : 'el cáliz espera los primeros papelitos…';
+      updateCounter(data.suggestion_count);
+      if (JSON.stringify(data.entries) !== JSON.stringify(entries)) {
+        entries = data.entries;
+        renderPapers();
+      }
+    } else if (data.state === 'drawn' && state === 'idle') {
+      const ageSec = (Date.now() - new Date(data.drawn_at).getTime()) / 1000;
+      entries = data.entries.length ? data.entries : entries;
+      if (ageSec <= 90 && !reducedMotion) {
+        playDrawSequence(data.winner);
+      } else {
+        showDone(data.winner, true);
+      }
+    }
+  } catch (e) { /* transient network error — keep polling */ }
+
+  if (state !== 'done') pollTimer = setTimeout(poll, 2000 + (Math.random() * 600 - 300));
+}
+
+function updateCounter(n){
+  document.getElementById('counter').textContent = n
+    ? `${n} papelito${n === 1 ? '' : 's'} en el cáliz`
+    : 'aún no hay papelitos';
+}
+
+// ── idle papers drifting in the flames ────────────────────────────────────────
+
+function renderPapers(){
+  const box = document.getElementById('papers');
+  box.innerHTML = '';
+  entries.forEach((en, i) => {
+    const p = document.createElement('div');
+    p.className = 'papelito';
+    p.textContent = en.member_name;
+    p.style.borderLeft = `3px solid ${en.color || '#d9a441'}`;
+    // scatter across the flame: alternate columns, climb in rows of 3
+    const x = 16 + (i % 3) * 26 + Math.random() * 12;   // % across fire width
+    const y = 14 + ((i * 7) % 4) * 13 + Math.random() * 8; // % from bottom of fire zone
+    p.style.left = `${x}%`;
+    p.style.bottom = `${Math.min(y, 66)}%`;
+    box.appendChild(p);
+    if (!reducedMotion) {
+      const rot = (Math.random() * 14 - 7);
+      p.animate([
+        { transform: `translate(0,0) rotate(${rot}deg)` },
+        { transform: `translate(${Math.random() * 14 - 7}px, -${10 + Math.random() * 14}px) rotate(${-rot}deg)` },
+        { transform: `translate(0,0) rotate(${rot}deg)` },
+      ], { duration: 3800 + Math.random() * 2400, iterations: Infinity, easing: 'ease-in-out', delay: -Math.random() * 3000 });
+    }
+  });
+  spawnEmbers();
+}
+
+function spawnEmbers(){
+  const box = document.getElementById('embers');
+  box.innerHTML = '';
+  if (reducedMotion) return;
+  for (let i = 0; i < 10; i++) {
+    const e = document.createElement('div');
+    e.className = 'ember';
+    e.style.left = `${35 + Math.random() * 30}%`;
+    e.style.bottom = '10%';
+    box.appendChild(e);
+    e.animate([
+      { transform: 'translate(0,0)', opacity: 0 },
+      { opacity: .9, offset: .15 },
+      { transform: `translate(${Math.random() * 60 - 30}px, -${140 + Math.random() * 120}px)`, opacity: 0 },
+    ], { duration: 2600 + Math.random() * 2200, iterations: Infinity, delay: Math.random() * 3000, easing: 'ease-out' });
+  }
+}
+
+// ── the draw ──────────────────────────────────────────────────────────────────
+
+function playDrawSequence(winner){
+  state = 'drawing';
+  const stage = document.getElementById('stage');
+  stage.classList.add('surging');
+  document.getElementById('status-line').textContent = '¡el fuego se agita!';
+
+  // papers erupt outward, spin, and burn away
+  const papers = [...document.querySelectorAll('#papers .papelito')];
+  papers.forEach((p, i) => {
+    const dx = (Math.random() * 2 - 1) * (window.innerWidth * .38);
+    const dy = -(120 + Math.random() * (window.innerHeight * .45));
+    p.animate([
+      { transform: 'translate(0,0) rotate(0deg)', opacity: 1 },
+      { transform: `translate(${dx * .6}px, ${dy}px) rotate(${Math.random() * 540 - 270}deg)`, opacity: 1, offset: .55 },
+      { transform: `translate(${dx}px, ${dy * .7}px) rotate(${Math.random() * 720 - 360}deg) scale(.3)`, opacity: 0, filter: 'brightness(2) saturate(3)' },
+    ], { duration: 3200 + Math.random() * 1200, delay: 200 + i * 130, easing: 'cubic-bezier(.3,.7,.4,1)', fill: 'forwards' });
+  });
+
+  // the chosen paper rises from the fire to center screen
+  setTimeout(() => {
+    const chosen = document.createElement('div');
+    chosen.className = 'papelito';
+    chosen.textContent = winner?.suggested_by || '✶';
+    chosen.style.left = '50%';
+    chosen.style.top = '55%';
+    chosen.style.position = 'fixed';
+    chosen.style.zIndex = '65';
+    chosen.style.fontSize = '.85rem';
+    chosen.style.padding = '.5rem .9rem';
+    document.body.appendChild(chosen);
+    const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+    const startY = window.innerHeight * .62;
+    chosen.animate([
+      { transform: `translate(-50%, ${startY - cy}px) scale(.7) rotate(-8deg)`, opacity: 0 },
+      { transform: 'translate(-50%, -120px) scale(1.6) rotate(6deg)', opacity: 1, offset: .45 },
+      { transform: 'translate(-50%, -50%) scale(2.1) rotate(0deg)', opacity: 1 },
+    ], { duration: 2200, easing: 'cubic-bezier(.34,1.3,.5,1)', fill: 'forwards' });
+
+    setTimeout(() => {
+      chosen.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 400, fill: 'forwards' });
+      setTimeout(() => chosen.remove(), 450);
+      showDone(winner, false);
+    }, 2400);
+  }, 4200);
+}
+
+function showDone(winner, quiet){
+  state = 'done';
+  clearTimeout(pollTimer);
+  const w = winner || {};
+  document.getElementById('status-line').textContent = 'la rifa ya se celebró';
+  updateCounter(0);
+  document.getElementById('papers').innerHTML = '';
+
+  document.getElementById('w-cover').innerHTML = w.book?.cover_url
+    ? `<img src="${esc(w.book.cover_url)}" alt="" class="w-full aspect-[2/3] object-cover">` : '';
+  document.getElementById('w-title').textContent = w.book?.title || '';
+  document.getElementById('w-author').textContent = w.book?.author || '';
+  document.getElementById('w-by').innerHTML = w.suggested_by
+    ? `🔥 propuesto por <strong>${esc(w.suggested_by)}</strong>` : '';
+
+  const overlay = document.getElementById('winner-overlay');
+  overlay.classList.remove('hidden');
+  if (!quiet && !reducedMotion) {
+    document.getElementById('winner-card').classList.add('card-in');
+    confetti();
+  }
+  document.getElementById('stage').classList.remove('surging');
+}
+
+function confetti(){
+  const colors = ['#d9a441', '#c9679a', '#f5c96b', '#f7f0e6', '#b28ae0'];
+  for (let i = 0; i < 90; i++) {
+    const c = document.createElement('div');
+    c.className = 'confeti';
+    c.style.left = `${Math.random() * 100}vw`;
+    c.style.width = `${5 + Math.random() * 5}px`;
+    c.style.height = `${8 + Math.random() * 8}px`;
+    c.style.background = colors[i % colors.length];
+    document.body.appendChild(c);
+    c.animate([
+      { transform: 'translateY(0) rotate(0deg)', opacity: 1 },
+      { transform: `translateY(${window.innerHeight + 80}px) translateX(${Math.random() * 160 - 80}px) rotate(${Math.random() * 900 - 450}deg)`, opacity: .9 },
+    ], { duration: 2600 + Math.random() * 2200, delay: Math.random() * 900, easing: 'cubic-bezier(.2,.6,.6,1)', fill: 'forwards' });
+    setTimeout(() => c.remove(), 6500);
+  }
+}
+
+poll();
+</script>
+</body>
+</html>

@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Evento — Entre bicis y libros</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: { extend: {
+    colors: {
+      noche: { DEFAULT:'#1e1533', deep:'#150e24', surface:'#2a1f47', line:'#3d2f61' },
+      crema: { DEFAULT:'#f7f0e6', dim:'#b5a9cf' },
+      marigold: '#d9a441',
+      orquidea: '#c9679a',
+      caliz: '#f5c96b',
+    },
+    fontFamily: { display:['Fraunces','Georgia','serif'], body:['Karla','system-ui','sans-serif'] },
+  }}
+};
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Karla:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
+<style>
+  body { font-family:'Karla',system-ui,sans-serif; }
+  .font-display { font-family:'Fraunces',Georgia,serif; }
+  .grain::before {
+    content:''; position:fixed; inset:0; pointer-events:none; z-index:50; opacity:.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  }
+  .sombra { box-shadow: 0 1px 2px rgba(10,6,20,.55), 0 10px 30px -10px rgba(10,6,20,.7), 0 24px 60px -20px rgba(217,164,65,.08); }
+  .sombra-crema { box-shadow: 0 2px 4px rgba(10,6,20,.4), 0 12px 32px -8px rgba(10,6,20,.55), 0 0 0 1px rgba(247,240,230,.06); }
+  :focus-visible { outline:2px solid #d9a441; outline-offset:2px; border-radius:4px; }
+  .cover-wrap { position:relative; overflow:hidden; border-radius:0.75rem; background:#2a1f47; }
+  .cover-wrap::after { content:''; position:absolute; inset:0; background:linear-gradient(160deg, rgba(245,201,107,.12), rgba(30,21,51,.28) 55%, rgba(201,103,154,.18)); mix-blend-mode:multiply; pointer-events:none; }
+  .nav-link { padding:.35rem .7rem; border-radius:9999px; color:#b5a9cf; transition:color .15s ease; }
+  .nav-link:hover { color:#f7f0e6; }
+  @keyframes drift { 0%,100% { transform:translateY(0) rotate(var(--rot)); } 50% { transform:translateY(-6px) rotate(calc(var(--rot) * -1)); } }
+  .papelito { animation: drift 6s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none!important; transition:none!important; } }
+</style>
+</head>
+<body class="grain bg-noche-deep text-crema min-h-screen">
+
+<nav class="sticky top-0 z-40 bg-noche-deep/85 backdrop-blur border-b border-noche-line">
+  <div class="max-w-5xl mx-auto px-5 h-14 flex items-center justify-between gap-3">
+    <a href="index.html" class="font-display text-lg whitespace-nowrap flex items-center gap-2">
+      <svg class="w-5 h-5 text-marigold shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6L5.6 18.4" opacity=".55"/></svg>
+      Entre bicis <em class="italic text-marigold">y libros</em>
+    </a>
+    <div class="flex items-center gap-1 text-sm overflow-x-auto">
+      <a class="nav-link" href="index.html">Inicio</a>
+      <a class="nav-link" href="biblioteca.html">Biblioteca</a>
+      <a class="nav-link" href="ranking.html">Ranking</a>
+      <a class="nav-link" href="reglas.html">Reglas</a>
+      <a class="nav-link flex items-center gap-2" href="perfil.html"><span id="nav-avatar" class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-noche-deep" style="background:#d9a441"></span><span class="hidden sm:inline" id="nav-name"></span></a>
+    </div>
+  </div>
+</nav>
+
+<main class="max-w-3xl mx-auto px-5 pb-24">
+  <div id="content" class="pt-12"><p class="text-crema-dim">Cargando…</p></div>
+</main>
+
+<script>
+const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+  ? 'http://localhost:3001' : 'https://bookclub-api.onrender.com';
+const token = localStorage.getItem('bcToken');
+const me = (() => { try { return JSON.parse(localStorage.getItem('bcMember')); } catch { return null; } })();
+if (!token) location.href = 'login.html';
+
+async function api(path, opts = {}) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...opts,
+    headers: { 'x-member-token': token, 'Content-Type': 'application/json', ...(opts.headers || {}) },
+  });
+  if (res.status === 401) { localStorage.removeItem('bcToken'); localStorage.removeItem('bcMember'); location.href = 'login.html'; throw new Error('401'); }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Error de conexión');
+  return data;
+}
+function esc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+function fmtFull(iso){ const d = new Date(iso); return `${d.getDate()} de ${MESES[d.getMonth()]} · ${d.toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'})}`; }
+
+if (me) {
+  document.getElementById('nav-avatar').textContent = me.name[0];
+  document.getElementById('nav-avatar').style.background = me.avatar_color || '#d9a441';
+  document.getElementById('nav-name').textContent = me.name;
+}
+
+const eventId = new URLSearchParams(location.search).get('id');
+if (!eventId) location.href = 'index.html';
+
+let ev = null;
+let picked = null; // book selected from Open Library search
+
+async function load(){
+  try {
+    ev = await api(`/api/events/${eventId}`);
+    render();
+  } catch (err) {
+    if (err.message !== '401') document.getElementById('content').innerHTML = `<p class="text-orquidea">${esc(err.message)}</p>`;
+  }
+}
+
+function render(){
+  const c = document.getElementById('content');
+  const mapLink = ev.location ? `<a class="text-caliz hover:underline" target="_blank" rel="noopener" href="https://maps.google.com/?q=${encodeURIComponent(ev.location + ' Amsterdam')}">${esc(ev.location)} ↗</a>` : 'Lugar por confirmar';
+
+  let body = '';
+  if (ev.status === 'planned') body = plannedSection();
+  else if (ev.status === 'raffled') body = winnerSection('Este es el elegido — ¡a leer!');
+  else if (ev.status === 'completed') body = winnerSection('El libro de este encuentro') + attendeesSection();
+  else body = '<p class="text-crema-dim">Este evento fue cancelado.</p>';
+
+  c.innerHTML = `
+    <a href="index.html" class="text-crema-dim text-sm hover:text-crema">← volver</a>
+    <header class="mt-4 mb-10">
+      <p class="uppercase tracking-[0.3em] text-xs text-crema-dim mb-3">${ev.status === 'completed' ? 'encuentro pasado' : 'próximo encuentro'}</p>
+      <h1 class="font-display text-4xl sm:text-5xl font-semibold">${esc(ev.title)}</h1>
+      <div class="mt-4 space-y-1 text-crema-dim">
+        <p>📅 ${fmtFull(ev.event_at)}</p>
+        <p>📍 ${mapLink}</p>
+        ${ev.theme ? `<p>🎭 Temática: <span class="text-orquidea font-semibold">${esc(ev.theme)}</span></p>` : ''}
+        ${ev.status === 'planned' ? (ev.selection_method === 'vote'
+          ? `<p class="text-caliz">🗳️ ${ev.vote_deadline ? `Votación abierta hasta el ${fmtFull(ev.vote_deadline)}` : 'El libro se elige por votación'}</p>`
+          : (ev.raffle_at ? `<p class="text-caliz">🔮 Rifa: ${fmtFull(ev.raffle_at)}</p>` : '')) : ''}
+      </div>
+      ${ev.description ? `<p class="mt-4 text-crema-dim leading-relaxed">${esc(ev.description)}</p>` : ''}
+    </header>
+    ${body}`;
+
+  if (ev.status === 'planned') wireSuggestionForm();
+}
+
+// ── Planned: suggestion form + goblet status ─────────────────────────────────
+
+function plannedSection(){
+  const isVote = ev.selection_method === 'vote';
+  const papers = Array.from({ length: ev.suggestion_count }, (_, i) =>
+    `<span class="papelito inline-block w-8 h-6 bg-crema/15 border border-crema/20 rounded-sm" style="--rot:${(i % 2 ? 1 : -1) * (3 + i * 2)}deg; animation-delay:-${i * .8}s"></span>`).join('');
+
+  const statusBox = isVote ? `
+    <section class="bg-noche-surface border border-noche-line rounded-2xl sombra p-6 sm:p-8 mb-8">
+      <div class="flex items-center justify-between gap-4 flex-wrap mb-1">
+        <h2 class="font-display text-2xl">La votación está abierta</h2>
+        <a href="votacion.html?id=${ev.id}" class="px-4 py-2 rounded-xl border border-caliz/40 text-caliz text-sm font-bold hover:bg-caliz/10 active:scale-[.98]">Ver la votación en vivo 🗳️</a>
+      </div>
+      <p class="text-crema-dim text-sm mb-5">${ev.suggestion_count} libro${ev.suggestion_count === 1 ? '' : 's'} en la papeleta. Cada miembro propone uno y todas votan — el voto es público.</p>
+      <div class="flex gap-3 flex-wrap min-h-[2rem]">${papers || '<span class="text-crema-dim text-sm italic">todavía no hay propuestas…</span>'}</div>
+    </section>` : `
+    <section class="bg-noche-surface border border-noche-line rounded-2xl sombra p-6 sm:p-8 mb-8">
+      <div class="flex items-center justify-between gap-4 flex-wrap mb-1">
+        <h2 class="font-display text-2xl">El cáliz espera</h2>
+        <a href="rifa.html?id=${ev.id}" class="px-4 py-2 rounded-xl border border-caliz/40 text-caliz text-sm font-bold hover:bg-caliz/10 active:scale-[.98]">Ver el cáliz en vivo 🔥</a>
+      </div>
+      <p class="text-crema-dim text-sm mb-5">${ev.suggestion_count} papelito${ev.suggestion_count === 1 ? '' : 's'} dentro. Cada miembro propone un libro; la rifa decide.</p>
+      <div class="flex gap-3 flex-wrap min-h-[2rem]">${papers || '<span class="text-crema-dim text-sm italic">todavía no hay propuestas…</span>'}</div>
+    </section>`;
+
+  return `
+    ${statusBox}
+
+    <section class="bg-noche-surface border border-noche-line rounded-2xl sombra p-6 sm:p-8">
+      ${ev.my_suggestion ? `
+        <h2 class="font-display text-2xl mb-1">Tu propuesta</h2>
+        <p class="text-crema-dim text-sm mb-5">${isVote ? 'Puedes cambiarla hasta que haya votos.' : 'Puedes cambiarla hasta el momento de la rifa.'}</p>
+        <div class="flex items-center gap-4 bg-noche-deep rounded-xl p-4 mb-6">
+          <div class="cover-wrap w-14 shrink-0">${ev.my_suggestion.cover_url ? `<img src="${esc(ev.my_suggestion.cover_url)}" alt="" class="w-14 h-20 object-cover">` : '<div class="w-14 h-20"></div>'}</div>
+          <div>
+            <p class="font-semibold">${esc(ev.my_suggestion.title)}</p>
+            <p class="text-sm text-crema-dim">${esc(ev.my_suggestion.author || '')}</p>
+          </div>
+          <span class="ml-auto text-marigold text-xl">✓</span>
+        </div>
+        <details><summary class="cursor-pointer text-sm text-marigold hover:underline">Cambiar mi propuesta</summary><div class="mt-5">${formHTML()}</div></details>`
+      : `
+        <h2 class="font-display text-2xl mb-1">Propón tu libro</h2>
+        <p class="text-crema-dim text-sm mb-5">Un libro por persona. Busca por título o rellena a mano.</p>
+        ${formHTML()}`}
+    </section>`;
+}
+
+function formHTML(){
+  return `
+    <div class="relative">
+      <input id="search" type="text" placeholder="Busca por título o autor…"
+        class="w-full bg-noche-deep border border-noche-line rounded-xl p-3 pr-24 text-sm placeholder:text-crema-dim/60 focus:border-marigold/60 focus:outline-none">
+      <button id="search-btn" class="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-lg bg-marigold text-noche-deep text-sm font-bold hover:brightness-110 active:scale-[.97]">Buscar</button>
+    </div>
+    <div id="search-results" class="mt-3 space-y-2"></div>
+    <div id="picked-preview" class="hidden mt-4 flex items-center gap-4 bg-noche-deep border border-marigold/40 rounded-xl p-4"></div>
+
+    <details class="mt-5"><summary class="cursor-pointer text-sm text-crema-dim hover:text-crema">O rellénalo a mano</summary>
+      <div class="grid sm:grid-cols-2 gap-3 mt-4">
+        <input id="f-title" placeholder="Título *" class="bg-noche-deep border border-noche-line rounded-xl p-3 text-sm placeholder:text-crema-dim/60 focus:border-marigold/60 focus:outline-none">
+        <input id="f-author" placeholder="Autor/a" class="bg-noche-deep border border-noche-line rounded-xl p-3 text-sm placeholder:text-crema-dim/60 focus:border-marigold/60 focus:outline-none">
+        <input id="f-year" placeholder="Año" inputmode="numeric" class="bg-noche-deep border border-noche-line rounded-xl p-3 text-sm placeholder:text-crema-dim/60 focus:border-marigold/60 focus:outline-none">
+        <input id="f-cover" placeholder="URL de la portada" class="bg-noche-deep border border-noche-line rounded-xl p-3 text-sm placeholder:text-crema-dim/60 focus:border-marigold/60 focus:outline-none">
+      </div>
+    </details>
+
+    <div class="mt-6 flex items-center gap-3">
+      <button id="submit-btn" class="px-6 py-3 rounded-xl bg-marigold text-noche-deep font-bold text-sm hover:brightness-110 active:scale-[.98] transition-[filter]">${ev.selection_method === 'vote' ? 'A la papeleta 🗳️' : 'Echar al cáliz 🔥'}</button>
+      <span id="form-status" class="text-sm text-crema-dim"></span>
+    </div>`;
+}
+
+function wireSuggestionForm(){
+  const searchBtn = document.getElementById('search-btn');
+  if (!searchBtn) return;
+
+  document.getElementById('search').addEventListener('keydown', e => { if (e.key === 'Enter') searchBtn.click(); });
+
+  searchBtn.addEventListener('click', async () => {
+    const q = document.getElementById('search').value.trim();
+    if (!q) return;
+    const box = document.getElementById('search-results');
+    box.innerHTML = '<p class="text-crema-dim text-sm py-2">Buscando…</p>';
+    try {
+      const res = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&limit=5&fields=title,author_name,first_publish_year,cover_i,isbn`);
+      const data = await res.json();
+      if (!data.docs?.length) { box.innerHTML = '<p class="text-crema-dim text-sm py-2">Nada encontrado — rellénalo a mano abajo.</p>'; return; }
+      box.innerHTML = data.docs.map((d, i) => `
+        <button class="result w-full flex items-center gap-3 bg-noche-deep border border-noche-line rounded-xl p-3 text-left hover:border-marigold/50 active:scale-[.99]" data-i="${i}">
+          ${d.cover_i ? `<img src="https://covers.openlibrary.org/b/id/${d.cover_i}-S.jpg" alt="" class="w-9 h-13 object-cover rounded">` : '<span class="w-9 h-13 bg-noche-surface rounded shrink-0"></span>'}
+          <span class="min-w-0"><span class="block text-sm font-semibold truncate">${esc(d.title)}</span>
+          <span class="block text-xs text-crema-dim truncate">${esc((d.author_name || []).join(', '))}${d.first_publish_year ? ` · ${d.first_publish_year}` : ''}</span></span>
+        </button>`).join('');
+      box.querySelectorAll('.result').forEach(btn => btn.addEventListener('click', () => {
+        const d = data.docs[Number(btn.dataset.i)];
+        picked = {
+          title: d.title,
+          author: (d.author_name || [])[0] || null,
+          year: d.first_publish_year || null,
+          isbn: (d.isbn || [])[0] || null,
+          cover_url: d.cover_i ? `https://covers.openlibrary.org/b/id/${d.cover_i}-L.jpg` : null,
+        };
+        box.innerHTML = '';
+        const prev = document.getElementById('picked-preview');
+        prev.classList.remove('hidden');
+        prev.innerHTML = `
+          ${picked.cover_url ? `<img src="${esc(picked.cover_url)}" alt="" class="w-14 h-20 object-cover rounded">` : ''}
+          <div class="min-w-0"><p class="font-semibold truncate">${esc(picked.title)}</p><p class="text-sm text-crema-dim">${esc(picked.author || '')}${picked.year ? ` · ${picked.year}` : ''}</p></div>
+          <span class="ml-auto text-marigold">listo ✓</span>`;
+      }));
+    } catch {
+      box.innerHTML = '<p class="text-orquidea text-sm py-2">No se pudo buscar — rellénalo a mano abajo.</p>';
+    }
+  });
+
+  document.getElementById('submit-btn').addEventListener('click', async () => {
+    const status = document.getElementById('form-status');
+    const manual = document.getElementById('f-title')?.value.trim();
+    const body = manual
+      ? { title: manual, author: document.getElementById('f-author').value.trim() || null, year: document.getElementById('f-year').value.trim() || null, cover_url: document.getElementById('f-cover').value.trim() || null }
+      : picked;
+    if (!body?.title) { status.textContent = 'Busca un libro o escribe el título a mano.'; return; }
+    status.textContent = ev.selection_method === 'vote' ? 'Sumando a la papeleta…' : 'Echando al cáliz…';
+    try {
+      await api(`/api/events/${eventId}/suggestion`, { method: 'PUT', body: JSON.stringify(body) });
+      status.textContent = '';
+      picked = null;
+      load();
+    } catch (e) { status.textContent = e.message; }
+  });
+}
+
+// ── Winner + attendees ────────────────────────────────────────────────────────
+
+function winnerSection(label){
+  if (!ev.winning_book) return '';
+  const b = ev.winning_book;
+  return `
+    <section class="bg-crema text-noche rounded-2xl sombra-crema p-6 sm:p-8 mb-8" style="transform:rotate(-.4deg)">
+      <p class="text-xs uppercase tracking-[0.25em] text-orquidea mb-4">${label}</p>
+      <div class="flex gap-5 items-start">
+        <div class="w-24 sm:w-28 shrink-0 rounded-lg overflow-hidden shadow-lg">${b.cover_url ? `<img src="${esc(b.cover_url)}" alt="" class="w-full aspect-[2/3] object-cover">` : ''}</div>
+        <div>
+          <h2 class="font-display text-2xl sm:text-3xl font-semibold leading-tight">${esc(b.title)}</h2>
+          <p class="text-noche/70 mt-1">${esc(b.author || '')}${b.year ? ` · ${b.year}` : ''}</p>
+          ${ev.suggested_by ? (ev.selection_method === 'vote'
+            ? `<p class="mt-3 text-sm">🗳️ elegido por votación — propuesto por <strong>${esc(ev.suggested_by)}</strong></p>`
+            : `<p class="mt-3 text-sm">🔥 salió del cáliz gracias a <strong>${esc(ev.suggested_by)}</strong></p>`) : ''}
+          ${b.description ? `<p class="mt-3 text-sm text-noche/70 leading-relaxed">${esc(b.description)}</p>` : ''}
+        </div>
+      </div>
+    </section>`;
+}
+
+function attendeesSection(){
+  if (!ev.attendees?.length) return '';
+  return `
+    <section class="bg-noche-surface border border-noche-line rounded-2xl sombra p-6 sm:p-8">
+      <h2 class="font-display text-2xl mb-4">Estuvieron ahí</h2>
+      <div class="flex flex-wrap gap-2">
+        ${ev.attendees.map(a => `<span class="inline-flex items-center gap-2 bg-noche-deep border border-noche-line rounded-full pl-1 pr-3 py-1 text-sm">
+          <span class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-noche-deep" style="background:${esc(a.avatar_color || '#d9a441')}">${esc(a.name[0])}</span>${esc(a.name)}</span>`).join('')}
+      </div>
+    </section>`;
+}
+
+load();
+</script>
+</body>
+</html>
