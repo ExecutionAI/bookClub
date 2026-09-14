@@ -10,10 +10,10 @@ const uuid = () => crypto.randomUUID();
 
 const UNIQUE = {
   members: [['name']],
-  suggestions: [['event_id', 'member_id']],
+  suggestions: [],
   ratings: [['member_id', 'book_id']],
   attendance: [['event_id', 'member_id']],
-  votes: [['event_id', 'member_id', 'round']],
+  votes: [['event_id', 'member_id', 'suggestion_id', 'round']],
 };
 
 class Query {

@@ -310,12 +310,21 @@ app.get('/api/events/:id', requireMember, async (req, res) => {
       }
     }
 
-    // My suggestion (with book details)
-    let my_suggestion = null;
-    const mine = suggestions.find(s => s.member_id === req.member.id);
-    if (mine) {
-      const { data: b } = await supabase.from('books').select('id, title, author, year, cover_url').eq('id', mine.book_id).single();
-      my_suggestion = b;
+    // My suggestions (array, with book details for each)
+    let my_suggestions = [];
+    const mine = suggestions.filter(s => String(s.member_id) === String(req.member.id));
+    if (mine.length) {
+      const { data: myBooks } = await supabase.from('books')
+        .select('id, title, author, year, cover_url').in('id', mine.map(s => s.book_id));
+      const booksById = Object.fromEntries((myBooks || []).map(b => [b.id, b]));
+      my_suggestions = mine.map(s => ({ suggestion_id: s.id, ...booksById[s.book_id] }));
+    }
+
+    // Locked: vote events lock suggestions once any vote is cast
+    let locked = false;
+    if (event.status === 'planned' && event.selection_method === 'vote') {
+      const { data: voteCheck } = await supabase.from('votes').select('id').eq('event_id', event.id);
+      locked = !!(voteCheck?.length);
     }
 
     // Attendees (names) — only for completed events
@@ -329,7 +338,8 @@ app.get('/api/events/:id', requireMember, async (req, res) => {
       ...event,
       winning_book,
       suggested_by,
-      my_suggestion,
+      my_suggestions,
+      locked,
       suggestion_count: suggestions.length,
       attendees,
     });
@@ -338,8 +348,8 @@ app.get('/api/events/:id', requireMember, async (req, res) => {
   }
 });
 
-// Submit / replace my suggestion (one per member per event, locked once drawn)
-app.put('/api/events/:id/suggestion', requireMember, async (req, res) => {
+// Add a new suggestion — members can have multiple per event, locked once drawn or once votes exist
+app.post('/api/events/:id/suggestion', requireMember, async (req, res) => {
   const { title, author, year, isbn, cover_url, description } = req.body;
   if (!title?.trim()) return res.status(400).json({ error: 'El título es obligatorio' });
 
@@ -347,10 +357,8 @@ app.put('/api/events/:id/suggestion', requireMember, async (req, res) => {
     const { data: event } = await supabase.from('events').select('id, status, drawn_at, selection_method').eq('id', req.params.id).single();
     if (!event) return res.status(404).json({ error: 'Evento no encontrado' });
     if (event.drawn_at || event.status !== 'planned') {
-      return res.status(400).json({ error: 'La elección ya se celebró — no se pueden cambiar propuestas' });
+      return res.status(400).json({ error: 'La elección ya se celebró — no se pueden añadir propuestas' });
     }
-    // Vote events: once ballots exist, replacing a suggestion would silently
-    // repoint existing votes at a different book (upsert keeps the row id).
     if (event.selection_method === 'vote') {
       const { data: existingVotes } = await supabase.from('votes').select('id').eq('event_id', event.id);
       if (existingVotes?.length) {
@@ -373,15 +381,43 @@ app.put('/api/events/:id/suggestion', requireMember, async (req, res) => {
       .single();
     if (bookErr) throw bookErr;
 
-    // Replace any previous suggestion (old suggested book row stays orphaned — harmless, filtered by status)
     const { data: suggestion, error: sugErr } = await supabase
       .from('suggestions')
-      .upsert({ event_id: event.id, member_id: req.member.id, book_id: book.id }, { onConflict: 'event_id,member_id' })
+      .insert({ event_id: event.id, member_id: req.member.id, book_id: book.id })
       .select()
       .single();
     if (sugErr) throw sugErr;
 
     res.json({ success: true, suggestion, book });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Remove one of my suggestions (locked once drawn or once votes exist)
+app.delete('/api/events/:id/suggestion/:suggestion_id', requireMember, async (req, res) => {
+  try {
+    const { data: event } = await supabase.from('events').select('id, status, drawn_at, selection_method').eq('id', req.params.id).single();
+    if (!event) return res.status(404).json({ error: 'Evento no encontrado' });
+    if (event.drawn_at || event.status !== 'planned') {
+      return res.status(400).json({ error: 'La elección ya se celebró — no se pueden quitar propuestas' });
+    }
+    if (event.selection_method === 'vote') {
+      const { data: existingVotes } = await supabase.from('votes').select('id').eq('event_id', event.id);
+      if (existingVotes?.length) {
+        return res.status(400).json({ error: 'Ya hay votos — las propuestas están bloqueadas' });
+      }
+    }
+
+    const { data: suggestion } = await supabase.from('suggestions')
+      .select('id, member_id').eq('id', req.params.suggestion_id).eq('event_id', req.params.id).single();
+    if (!suggestion) return res.status(404).json({ error: 'Propuesta no encontrada' });
+    if (String(suggestion.member_id) !== String(req.member.id)) {
+      return res.status(403).json({ error: 'Solo puedes quitar tus propias propuestas' });
+    }
+
+    await supabase.from('suggestions').delete().eq('id', req.params.suggestion_id);
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -478,7 +514,9 @@ app.get('/api/events/:id/votes', requireMember, async (req, res) => {
       };
     });
 
-    const myVote = (votes || []).find(v => String(v.member_id) === String(req.member.id));
+    const myVotes = (votes || [])
+      .filter(v => String(v.member_id) === String(req.member.id))
+      .map(v => v.suggestion_id);
 
     let winner = null;
     if (event.drawn_at && event.winning_book_id) {
@@ -494,8 +532,9 @@ app.get('/api/events/:id/votes', requireMember, async (req, res) => {
       vote_deadline: event.vote_deadline || null,
       deadline_passed: !!(event.vote_deadline && new Date(event.vote_deadline) < new Date()),
       candidates: candidatePayload,
-      my_vote: myVote ? myVote.suggestion_id : null,
+      my_votes: myVotes,
       total_votes: (votes || []).length,
+      total_voters: new Set((votes || []).map(v => v.member_id)).size,
       drawn_at: event.drawn_at,
       winner,
     });
@@ -504,7 +543,7 @@ app.get('/api/events/:id/votes', requireMember, async (req, res) => {
   }
 });
 
-// Cast or change my vote (one per member per round, replaceable until close)
+// Toggle a vote — cast if not yet voted for this book, remove if already voted
 app.put('/api/events/:id/vote', requireMember, async (req, res) => {
   const { suggestion_id } = req.body;
   if (!suggestion_id) return res.status(400).json({ error: 'Falta el libro elegido' });
@@ -524,17 +563,28 @@ app.put('/api/events/:id/vote', requireMember, async (req, res) => {
       return res.status(400).json({ error: 'Ese libro no está en esta ronda' });
     }
 
+    const round = event.vote_round || 1;
+    const { data: existing } = await supabase.from('votes')
+      .select('id')
+      .eq('event_id', event.id)
+      .eq('member_id', req.member.id)
+      .eq('suggestion_id', suggestion_id)
+      .eq('round', round)
+      .single();
+
+    if (existing) {
+      await supabase.from('votes').delete().eq('id', existing.id);
+      return res.json({ success: true, voted: false });
+    }
+
     const { data: vote, error } = await supabase
       .from('votes')
-      .upsert(
-        { event_id: event.id, member_id: req.member.id, suggestion_id, round: event.vote_round || 1 },
-        { onConflict: 'event_id,member_id,round' }
-      )
+      .insert({ event_id: event.id, member_id: req.member.id, suggestion_id, round })
       .select()
       .single();
     if (error) throw error;
 
-    res.json({ success: true, vote });
+    res.json({ success: true, voted: true, vote });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

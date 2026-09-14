@@ -162,7 +162,6 @@ let state = 'loading';   // loading | open | done
 let pollTimer = null;
 let countdownTimer = null;
 let deadline = null;
-let voting = false;      // true while a PUT /vote is in flight
 
 async function poll(){
   try {
@@ -185,7 +184,7 @@ function render(data){
   const banner = document.getElementById('runoff-banner');
   if (data.round > 1 && data.state === 'open') {
     banner.classList.remove('hidden');
-    document.getElementById('runoff-text').textContent = `Solo quedan ${data.candidates.length} libros en la papeleta. Tu voto de la ronda anterior no cuenta — vota otra vez.`;
+    document.getElementById('runoff-text').textContent = `Solo quedan ${data.candidates.length} libros en la papeleta. Tus votos de la ronda anterior no cuentan — vota de nuevo.`;
   } else {
     banner.classList.add('hidden');
   }
@@ -200,9 +199,10 @@ function render(data){
   state = 'open';
 
   const closed = data.deadline_passed;
+  const myVoteSet = new Set(data.my_votes || []);
   const maxVotes = Math.max(1, ...data.candidates.map(c => c.votes));
   document.getElementById('candidates').innerHTML = data.candidates.map(c => {
-    const mine = data.my_vote === c.suggestion_id;
+    const mine = myVoteSet.has(c.suggestion_id);
     const voterChips = c.voters.map(v => `
       <span class="inline-flex items-center gap-1.5 text-xs bg-noche-deep border border-noche-line rounded-full pl-1 pr-2.5 py-0.5">
         <span class="w-4 h-4 rounded-full inline-block" style="background:${esc(v.avatar_color)}"></span>${esc(v.name)}
@@ -222,7 +222,7 @@ function render(data){
           <button class="vote-btn shrink-0 px-4 py-2 rounded-xl text-sm font-bold active:scale-[.97] ${mine
             ? 'bg-marigold text-noche-deep'
             : 'border border-marigold/40 text-marigold hover:bg-marigold/10'} ${closed ? 'opacity-40 pointer-events-none' : ''}"
-            data-id="${c.suggestion_id}" ${closed ? 'disabled' : ''}>${mine ? 'Tu voto ✓' : 'Votar'}</button>
+            data-id="${c.suggestion_id}" ${closed ? 'disabled' : ''}>${mine ? 'Votado ✓' : 'Votar'}</button>
         </div>
         <div class="mt-3 flex items-center gap-3">
           <div class="tally-track flex-1"><div class="tally-fill" style="transform:scaleX(${c.votes / maxVotes})"></div></div>
@@ -233,20 +233,22 @@ function render(data){
     </article>`;
   }).join('');
 
-  document.getElementById('total-line').textContent = data.total_votes
-    ? `${data.total_votes} voto${data.total_votes === 1 ? '' : 's'} hasta ahora — el voto es público y puedes cambiarlo hasta el cierre`
+  const tv = data.total_votes, vr = data.total_voters;
+  document.getElementById('total-line').textContent = tv
+    ? `${tv} voto${tv === 1 ? '' : 's'} de ${vr} miembro${vr === 1 ? '' : 's'} — el voto es público y puedes votar varios libros`
     : 'nadie ha votado todavía — sé la primera 🗳️';
 
   document.querySelectorAll('.vote-btn').forEach(b => b.addEventListener('click', async () => {
-    if (voting) return;
-    voting = true;
+    if (b.disabled) return;
+    b.disabled = true;
     try {
       await api(`/api/events/${eventId}/vote`, { method: 'PUT', body: JSON.stringify({ suggestion_id: b.dataset.id }) });
       clearTimeout(pollTimer);
       await poll();
     } catch (e) {
+      b.disabled = false;
       if (e.message !== '401') document.getElementById('total-line').textContent = e.message;
-    } finally { voting = false; }
+    }
   }));
 }
 

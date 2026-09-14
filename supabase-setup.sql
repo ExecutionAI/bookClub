@@ -73,14 +73,13 @@ ALTER TABLE bookclub.events ADD COLUMN IF NOT EXISTS vote_deadline timestamptz;
 ALTER TABLE bookclub.events ADD COLUMN IF NOT EXISTS vote_round int NOT NULL DEFAULT 1;
 ALTER TABLE bookclub.events ADD COLUMN IF NOT EXISTS runoff_candidate_ids uuid[];
 
--- 6. Suggestions — one per member per event, replaceable until draw
+-- 6. Suggestions — multiple per member per event, locked once drawn or once votes exist
 CREATE TABLE IF NOT EXISTS bookclub.suggestions (
   id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   event_id   uuid NOT NULL REFERENCES bookclub.events(id) ON DELETE CASCADE,
   member_id  uuid NOT NULL REFERENCES bookclub.members(id),
   book_id    uuid NOT NULL REFERENCES bookclub.books(id),
-  created_at timestamptz DEFAULT now(),
-  UNIQUE (event_id, member_id)
+  created_at timestamptz DEFAULT now()
 );
 
 ALTER TABLE bookclub.events
@@ -90,9 +89,9 @@ ALTER TABLE bookclub.events
   FOREIGN KEY (winning_suggestion_id) REFERENCES bookclub.suggestions(id);
 
 -- 6b. Votes — public voting when an event's selection_method = 'vote'.
--- One vote per member per round, replaceable until the admin closes the vote.
--- Ties open a runoff round (events.vote_round + runoff_candidate_ids); old
--- rounds stay archived here under their round number.
+-- Members can vote for multiple books; one vote per book per member per round.
+-- Toggling the same book removes the vote. Ties open a runoff round
+-- (events.vote_round + runoff_candidate_ids); old rounds stay archived.
 CREATE TABLE IF NOT EXISTS bookclub.votes (
   id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   event_id      uuid NOT NULL REFERENCES bookclub.events(id) ON DELETE CASCADE,
@@ -100,9 +99,22 @@ CREATE TABLE IF NOT EXISTS bookclub.votes (
   suggestion_id uuid NOT NULL REFERENCES bookclub.suggestions(id) ON DELETE CASCADE,
   round         int NOT NULL DEFAULT 1,
   created_at    timestamptz DEFAULT now(),
-  updated_at    timestamptz DEFAULT now(),
-  UNIQUE (event_id, member_id, round)
+  UNIQUE (event_id, member_id, suggestion_id, round)
 );
+
+-- 6c. Idempotent migrations for existing databases
+ALTER TABLE bookclub.suggestions DROP CONSTRAINT IF EXISTS suggestions_event_id_member_id_key;
+ALTER TABLE bookclub.votes DROP CONSTRAINT IF EXISTS votes_event_id_member_id_round_key;
+ALTER TABLE bookclub.votes DROP COLUMN IF EXISTS updated_at;
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'votes_event_id_member_id_suggestion_id_round_key'
+  ) THEN
+    ALTER TABLE bookclub.votes
+      ADD CONSTRAINT votes_event_id_member_id_suggestion_id_round_key
+      UNIQUE (event_id, member_id, suggestion_id, round);
+  END IF;
+END $$;
 
 -- 7. Ratings — 0–10 scale, half-point steps; note is private to the member
 CREATE TABLE IF NOT EXISTS bookclub.ratings (

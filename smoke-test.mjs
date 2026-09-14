@@ -41,16 +41,20 @@ check('planned upcoming event exists', !!nextEvent);
 
 const detail = await fetch(`${BASE}/api/events/${nextEvent.id}`, { headers: H }).then(j);
 check('event detail: suggestion_count = 3', detail.suggestion_count === 3, `got ${detail.suggestion_count}`);
-check('event detail: my_suggestion null (Paola)', detail.my_suggestion === null);
+check('event detail: my_suggestions empty (Paola)', detail.my_suggestions?.length === 0, `got ${detail.my_suggestions?.length}`);
 
-// ── Suggestions: submit, replace, count stays ──
-const sug1 = await fetch(`${BASE}/api/events/${nextEvent.id}/suggestion`, { method: 'PUT', headers: H, body: JSON.stringify({ title: 'Paradais', author: 'Fernanda Melchor', year: 2021 }) }).then(j);
-check('suggestion created', sug1.success === true);
-const sug2 = await fetch(`${BASE}/api/events/${nextEvent.id}/suggestion`, { method: 'PUT', headers: H, body: JSON.stringify({ title: 'Temporada de huracanes', author: 'Fernanda Melchor', year: 2017 }) }).then(j);
-check('suggestion replaced', sug2.success === true);
+// ── Suggestions: add multiple, delete, count tracks correctly ──
+const sug1 = await fetch(`${BASE}/api/events/${nextEvent.id}/suggestion`, { method: 'POST', headers: H, body: JSON.stringify({ title: 'Paradais', author: 'Fernanda Melchor', year: 2021 }) }).then(j);
+check('suggestion 1 created', sug1.success === true);
+const sug2 = await fetch(`${BASE}/api/events/${nextEvent.id}/suggestion`, { method: 'POST', headers: H, body: JSON.stringify({ title: 'Temporada de huracanes', author: 'Fernanda Melchor', year: 2017 }) }).then(j);
+check('suggestion 2 created (multi allowed)', sug2.success === true);
 const detail2 = await fetch(`${BASE}/api/events/${nextEvent.id}`, { headers: H }).then(j);
-check('replace does not duplicate (count 4)', detail2.suggestion_count === 4, `got ${detail2.suggestion_count}`);
-check('my_suggestion is the replacement', detail2.my_suggestion?.title === 'Temporada de huracanes');
+check('two adds increment count (count 5)', detail2.suggestion_count === 5, `got ${detail2.suggestion_count}`);
+check('my_suggestions has 2 entries', detail2.my_suggestions?.length === 2, `got ${detail2.my_suggestions?.length}`);
+const delSug = await fetch(`${BASE}/api/events/${nextEvent.id}/suggestion/${sug1.suggestion.id}`, { method: 'DELETE', headers: H });
+check('delete suggestion → 200', delSug.status === 200);
+const detail3 = await fetch(`${BASE}/api/events/${nextEvent.id}`, { headers: H }).then(j);
+check('count decrements after delete (count 4)', detail3.suggestion_count === 4, `got ${detail3.suggestion_count}`);
 
 // ── Raffle poll (pre-draw) ──
 const raffle1 = await fetch(`${BASE}/api/events/${nextEvent.id}/raffle`, { headers: H2 }).then(j);
@@ -63,7 +67,7 @@ check('draw 1 succeeds', draw1.success === true && !!draw1.winner?.book?.title);
 const draw2 = await fetch(`${BASE}/api/admin/events/${nextEvent.id}/draw`, { method: 'POST', headers: ADMIN }).then(j);
 check('draw 2 idempotent (same winner)', draw2.already_drawn === true && draw2.winner.book.title === draw1.winner.book.title);
 
-const lateSug = await fetch(`${BASE}/api/events/${nextEvent.id}/suggestion`, { method: 'PUT', headers: H2, body: JSON.stringify({ title: 'Tarde' }) });
+const lateSug = await fetch(`${BASE}/api/events/${nextEvent.id}/suggestion`, { method: 'POST', headers: H2, body: JSON.stringify({ title: 'Tarde' }) });
 check('suggestion after draw → 400', lateSug.status === 400);
 
 const raffle2 = await fetch(`${BASE}/api/events/${nextEvent.id}/raffle`, { headers: H2 }).then(j);
@@ -145,18 +149,24 @@ check('vote on raffle event → 400', voteOnRaffle.status === 400);
 const drawOnVote = await fetch(`${BASE}/api/admin/events/${voteEvent.id}/draw`, { method: 'POST', headers: ADMIN });
 check('draw on vote event → 400', drawOnVote.status === 400);
 
-// ── Happy path: vote + re-vote (no duplicates) ──
+// ── Happy path: multi-vote (A and B), toggle off B ──
 const v1 = await fetch(`${BASE}/api/events/${voteEvent.id}/vote`, { method: 'PUT', headers: H, body: JSON.stringify({ suggestion_id: candB.suggestion_id }) }).then(j);
-check('Paola votes', v1.success === true);
+check('Paola votes B', v1.success === true && v1.voted === true, JSON.stringify(v1));
 const v2 = await fetch(`${BASE}/api/events/${voteEvent.id}/vote`, { method: 'PUT', headers: H, body: JSON.stringify({ suggestion_id: candA.suggestion_id }) }).then(j);
-check('Paola changes her vote', v2.success === true);
+check('Paola also votes A (multi-vote)', v2.success === true && v2.voted === true, JSON.stringify(v2));
 const poll2 = await fetch(`${BASE}/api/events/${voteEvent.id}/votes`, { headers: H }).then(j);
 const poll2A = poll2.candidates.find(c => c.suggestion_id === candA.suggestion_id);
-check('re-vote does not duplicate (total 2, A=2)', poll2.total_votes === 2 && poll2A.votes === 2, `got total ${poll2.total_votes}, A ${poll2A?.votes}`);
-check('my_vote reflects final choice', poll2.my_vote === candA.suggestion_id);
+check('multi-vote: total 3, A=2', poll2.total_votes === 3 && poll2A.votes === 2, `got total ${poll2.total_votes}, A ${poll2A?.votes}`);
+check('my_votes includes both A and B', poll2.my_votes?.includes(candA.suggestion_id) && poll2.my_votes?.includes(candB.suggestion_id), JSON.stringify(poll2.my_votes));
+
+const v3 = await fetch(`${BASE}/api/events/${voteEvent.id}/vote`, { method: 'PUT', headers: H, body: JSON.stringify({ suggestion_id: candB.suggestion_id }) }).then(j);
+check('Paola un-votes B (toggle off)', v3.success === true && v3.voted === false, JSON.stringify(v3));
+const poll2b = await fetch(`${BASE}/api/events/${voteEvent.id}/votes`, { headers: H }).then(j);
+const poll2bB = poll2b.candidates.find(c => c.suggestion_id === candB.suggestion_id);
+check('toggle off: total back to 2, B=0', poll2b.total_votes === 2 && poll2bB.votes === 0, `total ${poll2b.total_votes}, B ${poll2bB?.votes}`);
 
 // ── Suggestion lock once votes exist ──
-const lockedSug = await fetch(`${BASE}/api/events/${voteEvent.id}/suggestion`, { method: 'PUT', headers: H, body: JSON.stringify({ title: 'Cambio tardío' }) });
+const lockedSug = await fetch(`${BASE}/api/events/${voteEvent.id}/suggestion`, { method: 'POST', headers: H, body: JSON.stringify({ title: 'Propuesta tardía' }) });
 check('suggestion locked once votes exist → 400', lockedSug.status === 400);
 
 // ── Deadline blocks members (not admin) ──

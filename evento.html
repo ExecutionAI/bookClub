@@ -47,6 +47,8 @@ tailwind.config = {
   .nav-link:hover { color:#f7f0e6; }
   @keyframes drift { 0%,100% { transform:translateY(0) rotate(var(--rot)); } 50% { transform:translateY(-6px) rotate(calc(var(--rot) * -1)); } }
   .papelito { animation: drift 6s ease-in-out infinite; }
+  @keyframes slideIn { from { opacity:0; transform:scale(.97) translateY(6px); } to { opacity:1; transform:scale(1) translateY(0); } }
+  .sug-item { animation: slideIn .2s ease both; }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none!important; transition:none!important; } }
 </style>
 </head>
@@ -173,7 +175,7 @@ function plannedSection(){
         <h2 class="font-display text-2xl">La votación está abierta</h2>
         <a href="votacion.html?id=${ev.id}" class="px-4 py-2 rounded-xl border border-caliz/40 text-caliz text-sm font-bold hover:bg-caliz/10 active:scale-[.98]">Ver la votación en vivo 🗳️</a>
       </div>
-      <p class="text-crema-dim text-sm mb-5">${ev.suggestion_count} libro${ev.suggestion_count === 1 ? '' : 's'} en la papeleta. Cada miembro propone uno y todas votan — el voto es público.</p>
+      <p class="text-crema-dim text-sm mb-5">${ev.suggestion_count} libro${ev.suggestion_count === 1 ? '' : 's'} en la papeleta. Cada miembro puede proponer varios libros y todas votan — el voto es público.</p>
       <div class="flex gap-3 flex-wrap min-h-[2rem]">${papers || '<span class="text-crema-dim text-sm italic">todavía no hay propuestas…</span>'}</div>
     </section>` : `
     <section class="bg-noche-surface border border-noche-line rounded-2xl sombra p-6 sm:p-8 mb-8">
@@ -181,7 +183,7 @@ function plannedSection(){
         <h2 class="font-display text-2xl">El cáliz espera</h2>
         <a href="rifa.html?id=${ev.id}" class="px-4 py-2 rounded-xl border border-caliz/40 text-caliz text-sm font-bold hover:bg-caliz/10 active:scale-[.98]">Ver el cáliz en vivo 🔥</a>
       </div>
-      <p class="text-crema-dim text-sm mb-5">${ev.suggestion_count} papelito${ev.suggestion_count === 1 ? '' : 's'} dentro. Cada miembro propone un libro; la rifa decide.</p>
+      <p class="text-crema-dim text-sm mb-5">${ev.suggestion_count} papelito${ev.suggestion_count === 1 ? '' : 's'} dentro. Cada miembro puede proponer varios libros; la rifa decide.</p>
       <div class="flex gap-3 flex-wrap min-h-[2rem]">${papers || '<span class="text-crema-dim text-sm italic">todavía no hay propuestas…</span>'}</div>
     </section>`;
 
@@ -189,21 +191,43 @@ function plannedSection(){
     ${statusBox}
 
     <section class="bg-noche-surface border border-noche-line rounded-2xl sombra p-6 sm:p-8">
-      ${ev.my_suggestion ? `
-        <h2 class="font-display text-2xl mb-1">Tu propuesta</h2>
-        <p class="text-crema-dim text-sm mb-5">${isVote ? 'Puedes cambiarla hasta que haya votos.' : 'Puedes cambiarla hasta el momento de la rifa.'}</p>
-        <div class="flex items-center gap-4 bg-noche-deep rounded-xl p-4 mb-6">
-          <div class="cover-wrap w-14 shrink-0">${ev.my_suggestion.cover_url ? `<img src="${esc(ev.my_suggestion.cover_url)}" alt="" class="w-14 h-20 object-cover" onerror="noCover(this)">` : '<div class="w-14 h-20"></div>'}</div>
-          <div>
-            <p class="font-semibold">${esc(ev.my_suggestion.title)}</p>
-            <p class="text-sm text-crema-dim">${esc(ev.my_suggestion.author || '')}</p>
-          </div>
-          <span class="ml-auto text-marigold text-xl">✓</span>
+      ${ev.locked ? `
+        <div class="flex items-center gap-3 text-sm text-orquidea bg-orquidea/10 border border-orquidea/30 rounded-xl px-4 py-3 mb-6">
+          <svg class="w-4 h-4 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5 7V5a3 3 0 0 1 6 0v2" stroke-linecap="round"/></svg>
+          Las propuestas están bloqueadas — la votación ya comenzó.
         </div>
-        <details><summary class="cursor-pointer text-sm text-marigold hover:underline">Cambiar mi propuesta</summary><div class="mt-5">${formHTML()}</div></details>`
-      : `
-        <h2 class="font-display text-2xl mb-1">Propón tu libro</h2>
-        <p class="text-crema-dim text-sm mb-5">Un libro por persona. Busca por título o rellena a mano.</p>
+        ${(ev.my_suggestions || []).length ? `
+          <h2 class="font-display text-2xl mb-1">Tus propuestas</h2>
+          <ul class="space-y-3 mt-4">
+            ${(ev.my_suggestions || []).map(s => `
+              <li class="flex items-center gap-4 bg-noche-deep rounded-xl p-4">
+                <div class="cover-wrap w-14 shrink-0">${s.cover_url ? `<img src="${esc(s.cover_url)}" alt="" class="w-14 h-20 object-cover" onerror="noCover(this)">` : '<div class="w-14 h-20"></div>'}</div>
+                <div class="flex-1 min-w-0">
+                  <p class="font-semibold truncate">${esc(s.title)}</p>
+                  <p class="text-sm text-crema-dim">${esc(s.author || '')}</p>
+                </div>
+                <span class="text-marigold text-lg shrink-0">✓</span>
+              </li>`).join('')}
+          </ul>` : ''}` : `
+        ${(ev.my_suggestions || []).length ? `
+          <h2 class="font-display text-2xl mb-1">Tus propuestas</h2>
+          <p class="text-crema-dim text-sm mb-4">${isVote ? 'Puedes quitar o añadir más hasta que haya votos.' : 'Puedes quitar o añadir más hasta la rifa.'}</p>
+          <ul id="my-sug-list" class="space-y-3 mb-7">
+            ${(ev.my_suggestions || []).map((s, i) => `
+              <li class="sug-item flex items-center gap-4 bg-noche-deep rounded-xl p-4" style="animation-delay:${i * 60}ms" data-sug-id="${esc(s.suggestion_id)}">
+                <div class="cover-wrap w-14 shrink-0">${s.cover_url ? `<img src="${esc(s.cover_url)}" alt="" class="w-14 h-20 object-cover" onerror="noCover(this)">` : '<div class="w-14 h-20"></div>'}</div>
+                <div class="flex-1 min-w-0">
+                  <p class="font-semibold truncate">${esc(s.title)}</p>
+                  <p class="text-sm text-crema-dim">${esc(s.author || '')}</p>
+                </div>
+                <button class="remove-sug shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-crema-dim hover:text-orquidea hover:bg-orquidea/10 active:scale-95 transition-[color,background-color]"
+                  data-id="${esc(s.suggestion_id)}" aria-label="Quitar propuesta">
+                  <svg class="w-4 h-4 pointer-events-none" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 4h12M5 4V2h6v2M6 7v5M10 7v5M3 4l1 9h8l1-9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+              </li>`).join('')}
+          </ul>` : ''}
+        <h2 class="font-display text-2xl mb-1">${(ev.my_suggestions || []).length ? 'Agregar otra propuesta' : 'Propón tu libro'}</h2>
+        <p class="text-crema-dim text-sm mb-5">${(ev.my_suggestions || []).length ? 'Cuantos más libros propongas, más rico el debate.' : (isVote ? 'Puedes proponer uno o varios libros.' : 'Busca por título o rellena a mano.')}</p>
         ${formHTML()}`}
     </section>`;
 }
@@ -228,7 +252,7 @@ function formHTML(){
     </details>
 
     <div class="mt-6 flex items-center gap-3">
-      <button id="submit-btn" class="px-6 py-3 rounded-xl bg-marigold text-noche-deep font-bold text-sm hover:brightness-110 active:scale-[.98] transition-[filter]">${ev.selection_method === 'vote' ? 'A la papeleta 🗳️' : 'Echar al cáliz 🔥'}</button>
+      <button id="submit-btn" class="px-6 py-3 rounded-xl bg-marigold text-noche-deep font-bold text-sm hover:brightness-110 active:scale-[.98] transition-[filter]">${ev.selection_method === 'vote' ? 'Agregar a la papeleta 🗳️' : 'Agregar al cáliz 🔥'}</button>
       <span id="form-status" class="text-sm text-crema-dim"></span>
     </div>`;
 }
@@ -285,11 +309,37 @@ function wireSuggestionForm(){
     if (!body?.title) { status.textContent = 'Busca un libro o escribe el título a mano.'; return; }
     status.textContent = ev.selection_method === 'vote' ? 'Sumando a la papeleta…' : 'Echando al cáliz…';
     try {
-      await api(`/api/events/${eventId}/suggestion`, { method: 'PUT', body: JSON.stringify(body) });
+      await api(`/api/events/${eventId}/suggestion`, { method: 'POST', body: JSON.stringify(body) });
       status.textContent = '';
       picked = null;
+      const searchInput = document.getElementById('search');
+      if (searchInput) searchInput.value = '';
+      const searchResults = document.getElementById('search-results');
+      if (searchResults) searchResults.innerHTML = '';
+      const pickedPreview = document.getElementById('picked-preview');
+      if (pickedPreview) pickedPreview.classList.add('hidden');
       load();
     } catch (e) { status.textContent = e.message; }
+  });
+
+  wireRemoveButtons();
+}
+
+function wireRemoveButtons() {
+  document.querySelectorAll('.remove-sug').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (btn.disabled) return;
+      btn.disabled = true;
+      const sugId = btn.dataset.id;
+      try {
+        await api(`/api/events/${eventId}/suggestion/${sugId}`, { method: 'DELETE' });
+        load();
+      } catch (e) {
+        btn.disabled = false;
+        const status = document.getElementById('form-status');
+        if (status) status.textContent = e.message;
+      }
+    });
   });
 }
 
