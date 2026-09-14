@@ -602,8 +602,9 @@ app.get('/api/books/:id/pdf-url', requireMember, async (req, res) => {
     const { data: book } = await supabase.from('books').select('pdf_path, title').eq('id', req.params.id).single();
     if (!book?.pdf_path) return res.status(404).json({ error: 'Este libro no tiene PDF' });
 
+    const ext = book.pdf_path.endsWith('.epub') ? 'epub' : 'pdf';
     const { data, error } = await supabase.storage.from(PDF_BUCKET).createSignedUrl(book.pdf_path, 3600, {
-      download: `${book.title}.pdf`,
+      download: `${book.title}.${ext}`,
     });
     if (error) throw error;
     res.json({ url: data.signedUrl });
@@ -1053,15 +1054,16 @@ app.delete('/api/admin/books/:id', requireAdmin, async (req, res) => {
 // PDF upload (multipart, field name "file")
 app.post('/api/admin/books/:id/pdf', requireAdmin, upload.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'file is required' });
-  if (req.file.mimetype !== 'application/pdf') return res.status(400).json({ error: 'Only PDF files allowed' });
+  const ALLOWED = { 'application/pdf': 'pdf', 'application/epub+zip': 'epub' };
+  if (!ALLOWED[req.file.mimetype]) return res.status(400).json({ error: 'Solo se permiten archivos PDF o EPUB' });
 
   try {
     const { data: book } = await supabase.from('books').select('id').eq('id', req.params.id).single();
     if (!book) return res.status(404).json({ error: 'Book not found' });
 
-    const pdf_path = `books/${book.id}.pdf`;
+    const pdf_path = `books/${book.id}.${ALLOWED[req.file.mimetype]}`;
     const { error: upErr } = await supabase.storage.from(PDF_BUCKET).upload(pdf_path, req.file.buffer, {
-      contentType: 'application/pdf',
+      contentType: req.file.mimetype,
       upsert: true,
     });
     if (upErr) throw upErr;

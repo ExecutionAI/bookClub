@@ -183,6 +183,7 @@ const API_BASE = (location.hostname === 'localhost' || location.hostname === '12
 let adminToken = localStorage.getItem('adminToken') || '';
 
 function esc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function noCover(img){ const d=document.createElement('div'); d.className=img.className.replace('object-cover','').trim()+' bg-noche-surface'; img.replaceWith(d); }
 const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 function fmtDT(iso){ if(!iso) return '—'; const d = new Date(iso); return `${d.getDate()} ${MESES[d.getMonth()]} ${d.getFullYear()} · ${d.toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'})}`; }
 
@@ -329,7 +330,7 @@ async function loadEvents(){
         const sugs = await api(`/api/admin/events/${id}/suggestions`);
         box.innerHTML = sugs.length ? sugs.map(s => `
           <div class="flex items-center gap-2 py-1">
-            ${s.book?.cover_url ? `<img src="${esc(s.book.cover_url)}" class="w-6 h-9 object-cover rounded" alt="">` : '<span class="w-6 h-9 bg-noche-deep rounded"></span>'}
+            ${s.book?.cover_url ? `<img src="${esc(s.book.cover_url)}" class="w-6 h-9 object-cover rounded" alt="" onerror="noCover(this)">` : '<span class="w-6 h-9 bg-noche-deep rounded"></span>'}
             <span class="text-crema">${esc(s.book?.title || '?')}</span>
             <span class="text-crema-dim">— ${esc(s.member_name)}</span>
             ${s.votes ? `<span class="ml-auto text-xs px-2 py-0.5 rounded-full bg-caliz/15 text-caliz whitespace-nowrap">${s.votes} voto${s.votes === 1 ? '' : 's'}</span>` : ''}
@@ -483,13 +484,13 @@ async function loadBooks(){
     }[s] || '');
     list.innerHTML = visible.map(b => `
       <div class="bg-noche-surface border border-noche-line rounded-2xl sombra p-4 flex items-center gap-4 flex-wrap">
-        ${b.cover_url ? `<img src="${esc(b.cover_url)}" class="w-10 h-15 object-cover rounded" style="height:3.75rem" alt="">` : '<span class="w-10 bg-noche-deep rounded" style="height:3.75rem"></span>'}
+        ${b.cover_url ? `<img src="${esc(b.cover_url)}" class="w-10 h-15 object-cover rounded" style="height:3.75rem" alt="" onerror="noCover(this)">` : '<span class="w-10 bg-noche-deep rounded" style="height:3.75rem"></span>'}
         <div class="flex-1 min-w-[180px]">
           <p class="font-semibold">${esc(b.title)} ${tag(b.status)}</p>
           <p class="text-xs text-crema-dim">${esc(b.author || '')}${b.read_at ? ` · leído ${b.read_at}` : ''}${b.avg_score !== null ? ` · ⭐ ${b.avg_score}/10 (${b.rating_count})` : ''}</p>
         </div>
-        <label class="btn btn-ghost cursor-pointer">${b.has_pdf ? 'Reemplazar PDF' : 'Subir PDF'}<input type="file" accept="application/pdf" class="hidden pdf-input" data-id="${b.id}"></label>
-        ${b.has_pdf ? '<span class="text-xs text-caliz">📄 PDF ✓</span>' : ''}
+        <label class="btn btn-ghost cursor-pointer">${b.has_pdf ? 'Reemplazar archivo' : 'Subir PDF/EPUB'}<input type="file" accept=".pdf,.epub,application/pdf,application/epub+zip" class="hidden pdf-input" data-id="${b.id}"></label>
+        ${b.has_pdf ? '<span class="text-xs text-caliz">📄 ✓</span>' : ''}
         <button class="btn btn-danger act-delbook" data-id="${b.id}" data-name="${esc(b.title)}">Eliminar</button>
       </div>`).join('');
 
@@ -497,8 +498,8 @@ async function loadBooks(){
       if (!inp.files[0]) return;
       const fd = new FormData();
       fd.append('file', inp.files[0]);
-      toast('Subiendo PDF…');
-      try { await api(`/api/admin/books/${inp.dataset.id}/pdf`, { method: 'POST', body: fd }); toast('PDF subido 📄'); loadBooks(); }
+      toast('Subiendo archivo…');
+      try { await api(`/api/admin/books/${inp.dataset.id}/pdf`, { method: 'POST', body: fd }); toast('Archivo subido 📄'); loadBooks(); }
       catch (e) { toast(e.message); }
     }));
     list.querySelectorAll('.act-delbook').forEach(b => b.addEventListener('click', () => {
@@ -521,7 +522,7 @@ document.getElementById('b-search-btn').addEventListener('click', async () => {
     if (!data.docs?.length) { box.innerHTML = '<p class="text-crema-dim text-sm">Nada encontrado.</p>'; return; }
     box.innerHTML = data.docs.map((d, i) => `
       <button class="result w-full flex items-center gap-3 bg-noche-deep border border-noche-line rounded-xl p-2.5 text-left hover:border-marigold/50" data-i="${i}">
-        ${d.cover_i ? `<img src="https://covers.openlibrary.org/b/id/${d.cover_i}-S.jpg" class="w-8 h-12 object-cover rounded" alt="">` : '<span class="w-8 h-12 bg-noche-surface rounded"></span>'}
+        ${d.cover_i ? `<img src="https://covers.openlibrary.org/b/id/${d.cover_i}-S.jpg" class="w-8 h-12 object-cover rounded" alt="" onerror="noCover(this)">` : '<span class="w-8 h-12 bg-noche-surface rounded"></span>'}
         <span class="min-w-0"><span class="block text-sm font-semibold truncate">${esc(d.title)}</span>
         <span class="block text-xs text-crema-dim truncate">${esc((d.author_name || []).join(', '))}${d.first_publish_year ? ` · ${d.first_publish_year}` : ''}</span></span>
       </button>`).join('');

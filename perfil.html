@@ -121,6 +121,7 @@ async function api(path, opts = {}) {
   return data;
 }
 function esc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function noCover(img){ const d=document.createElement('div'); d.className=img.className.replace('object-cover','').trim()+' bg-noche-surface'; img.replaceWith(d); }
 const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 
 if (me) {
@@ -170,7 +171,7 @@ async function load(){
     list.innerHTML = data.books.map(b => `
       <a href="biblioteca.html?abrir=${b.id}" class="flex gap-4 bg-noche-surface border border-noche-line rounded-2xl sombra p-4 hover:border-marigold/40 transition-colors">
         <div class="cover-wrap w-16 shrink-0">
-          ${b.cover_url ? `<img src="${esc(b.cover_url)}" alt="" class="w-16 h-24 object-cover" loading="lazy">` : '<div class="w-16 h-24"></div>'}
+          ${b.cover_url ? `<img src="${esc(b.cover_url)}" alt="" class="w-16 h-24 object-cover" loading="lazy" onerror="noCover(this)">` : '<div class="w-16 h-24"></div>'}
         </div>
         <div class="flex-1 min-w-0">
           <div class="flex items-start justify-between gap-3">

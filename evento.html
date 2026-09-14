@@ -105,6 +105,7 @@ async function api(path, opts = {}) {
   return data;
 }
 function esc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function noCover(img){ const d=document.createElement('div'); d.className=img.className.replace('object-cover','').trim()+' bg-noche-surface'; img.replaceWith(d); }
 const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 function fmtFull(iso){ const d = new Date(iso); return `${d.getDate()} de ${MESES[d.getMonth()]} · ${d.toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'})}`; }
 
@@ -192,7 +193,7 @@ function plannedSection(){
         <h2 class="font-display text-2xl mb-1">Tu propuesta</h2>
         <p class="text-crema-dim text-sm mb-5">${isVote ? 'Puedes cambiarla hasta que haya votos.' : 'Puedes cambiarla hasta el momento de la rifa.'}</p>
         <div class="flex items-center gap-4 bg-noche-deep rounded-xl p-4 mb-6">
-          <div class="cover-wrap w-14 shrink-0">${ev.my_suggestion.cover_url ? `<img src="${esc(ev.my_suggestion.cover_url)}" alt="" class="w-14 h-20 object-cover">` : '<div class="w-14 h-20"></div>'}</div>
+          <div class="cover-wrap w-14 shrink-0">${ev.my_suggestion.cover_url ? `<img src="${esc(ev.my_suggestion.cover_url)}" alt="" class="w-14 h-20 object-cover" onerror="noCover(this)">` : '<div class="w-14 h-20"></div>'}</div>
           <div>
             <p class="font-semibold">${esc(ev.my_suggestion.title)}</p>
             <p class="text-sm text-crema-dim">${esc(ev.my_suggestion.author || '')}</p>
@@ -249,7 +250,7 @@ function wireSuggestionForm(){
       if (!data.docs?.length) { box.innerHTML = '<p class="text-crema-dim text-sm py-2">Nada encontrado — rellénalo a mano abajo.</p>'; return; }
       box.innerHTML = data.docs.map((d, i) => `
         <button class="result w-full flex items-center gap-3 bg-noche-deep border border-noche-line rounded-xl p-3 text-left hover:border-marigold/50 active:scale-[.99]" data-i="${i}">
-          ${d.cover_i ? `<img src="https://covers.openlibrary.org/b/id/${d.cover_i}-S.jpg" alt="" class="w-9 h-13 object-cover rounded">` : '<span class="w-9 h-13 bg-noche-surface rounded shrink-0"></span>'}
+          ${d.cover_i ? `<img src="https://covers.openlibrary.org/b/id/${d.cover_i}-S.jpg" alt="" class="w-9 h-13 object-cover rounded" onerror="noCover(this)">` : '<span class="w-9 h-13 bg-noche-surface rounded shrink-0"></span>'}
           <span class="min-w-0"><span class="block text-sm font-semibold truncate">${esc(d.title)}</span>
           <span class="block text-xs text-crema-dim truncate">${esc((d.author_name || []).join(', '))}${d.first_publish_year ? ` · ${d.first_publish_year}` : ''}</span></span>
         </button>`).join('');
@@ -266,7 +267,7 @@ function wireSuggestionForm(){
         const prev = document.getElementById('picked-preview');
         prev.classList.remove('hidden');
         prev.innerHTML = `
-          ${picked.cover_url ? `<img src="${esc(picked.cover_url)}" alt="" class="w-14 h-20 object-cover rounded">` : ''}
+          ${picked.cover_url ? `<img src="${esc(picked.cover_url)}" alt="" class="w-14 h-20 object-cover rounded" onerror="noCover(this)">` : ''}
           <div class="min-w-0"><p class="font-semibold truncate">${esc(picked.title)}</p><p class="text-sm text-crema-dim">${esc(picked.author || '')}${picked.year ? ` · ${picked.year}` : ''}</p></div>
           <span class="ml-auto text-marigold">listo ✓</span>`;
       }));
@@ -301,7 +302,7 @@ function winnerSection(label){
     <section class="bg-crema text-noche rounded-2xl sombra-crema p-6 sm:p-8 mb-8" style="transform:rotate(-.4deg)">
       <p class="text-xs uppercase tracking-[0.25em] text-orquidea mb-4">${label}</p>
       <div class="flex gap-5 items-start">
-        <div class="w-24 sm:w-28 shrink-0 rounded-lg overflow-hidden shadow-lg">${b.cover_url ? `<img src="${esc(b.cover_url)}" alt="" class="w-full aspect-[2/3] object-cover">` : ''}</div>
+        <div class="w-24 sm:w-28 shrink-0 rounded-lg overflow-hidden shadow-lg">${b.cover_url ? `<img src="${esc(b.cover_url)}" alt="" class="w-full aspect-[2/3] object-cover" onerror="noCover(this)">` : ''}</div>
         <div>
           <h2 class="font-display text-2xl sm:text-3xl font-semibold leading-tight">${esc(b.title)}</h2>
           <p class="text-noche/70 mt-1">${esc(b.author || '')}${b.year ? ` · ${b.year}` : ''}</p>

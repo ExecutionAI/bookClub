@@ -92,7 +92,7 @@ tailwind.config = {
   <header class="pt-12 pb-8">
     <p class="uppercase tracking-[0.3em] text-xs text-crema-dim mb-3">la estantería del club</p>
     <h1 class="font-display text-4xl sm:text-5xl font-semibold">Biblioteca</h1>
-    <p class="mt-3 text-crema-dim max-w-lg">Todo lo que hemos leído juntos. Toca un libro para puntuarlo, dejar tu nota privada o descargar el PDF.</p>
+    <p class="mt-3 text-crema-dim max-w-lg">Todo lo que hemos leído juntos. Toca un libro para puntuarlo, dejar tu nota privada o descargar el archivo.</p>
   </header>
 
   <div id="books-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-10">
@@ -152,6 +152,7 @@ async function api(path, opts = {}) {
   return data;
 }
 function esc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function noCover(img){ const d=document.createElement('div'); d.className=img.className.replace('object-cover','').trim()+' bg-noche-surface'; img.replaceWith(d); }
 
 if (me) {
   document.getElementById('nav-avatar').textContent = me.name[0];
@@ -184,10 +185,10 @@ function render(){
     <button class="book-card text-left" data-id="${b.id}">
       <div class="cover-wrap sombra-crema">
         ${b.status === 'reading' ? '<span class="absolute top-2 left-2 z-10 text-[10px] uppercase tracking-widest bg-caliz/90 text-noche-deep font-bold px-2 py-0.5 rounded-full">leyendo</span>' : ''}
-        ${b.cover_url ? `<img src="${esc(b.cover_url)}" alt="${esc(b.title)}" class="w-full aspect-[2/3] object-cover" loading="lazy">` : `<div class="w-full aspect-[2/3] flex items-center justify-center font-display text-center p-3 text-crema-dim text-sm">${esc(b.title)}</div>`}
+        ${b.cover_url ? `<img src="${esc(b.cover_url)}" alt="${esc(b.title)}" class="w-full aspect-[2/3] object-cover" loading="lazy" onerror="noCover(this)">` : `<div class="w-full aspect-[2/3] flex items-center justify-center font-display text-center p-3 text-crema-dim text-sm">${esc(b.title)}</div>`}
         <div class="absolute bottom-0 inset-x-0 bg-noche-deep/85 backdrop-blur-sm px-3 py-2 z-10 flex items-center justify-between">
           ${b.avg_score !== null ? `<span><span class="font-display font-semibold text-marigold">${b.avg_score}</span><span class="text-crema-dim text-xs"> / 10</span></span>` : '<span class="text-crema-dim text-xs">sin notas</span>'}
-          ${b.has_pdf ? '<span title="PDF disponible" class="text-xs">📄</span>' : ''}
+          ${b.has_pdf ? '<span title="Archivo disponible" class="text-xs">📄</span>' : ''}
         </div>
       </div>
       <p class="mt-3 text-sm font-semibold leading-snug">${esc(b.title)}</p>
@@ -211,15 +212,15 @@ async function openModal(b){
   current = b;
   document.getElementById('m-title').textContent = b.title;
   document.getElementById('m-author').textContent = [b.author, b.year].filter(Boolean).join(' · ');
-  document.getElementById('m-cover').innerHTML = `<div class="cover-wrap sombra-crema">${b.cover_url ? `<img src="${esc(b.cover_url)}" alt="" class="w-28 h-40 object-cover">` : `<div class="w-28 h-40"></div>`}</div>`;
+  document.getElementById('m-cover').innerHTML = `<div class="cover-wrap sombra-crema">${b.cover_url ? `<img src="${esc(b.cover_url)}" alt="" class="w-28 h-40 object-cover" onerror="noCover(this)">` : `<div class="w-28 h-40"></div>`}</div>`;
   document.getElementById('m-avg').innerHTML = b.avg_score !== null
     ? `<span class="font-display text-xl font-semibold text-marigold">${b.avg_score}</span><span class="text-crema-dim text-sm"> / 10 · nota del club (${b.rating_count} voto${b.rating_count === 1 ? '' : 's'})</span>`
     : '<span class="text-crema-dim text-sm">nadie lo ha puntuado todavía — sé la primera ✨</span>';
   document.getElementById('m-desc').textContent = b.description || '';
   document.getElementById('m-status').textContent = '';
   document.getElementById('m-pdf').innerHTML = b.has_pdf
-    ? `<button id="m-download" class="px-4 py-2 rounded-xl border border-caliz/40 text-caliz text-sm font-bold hover:bg-caliz/10 active:scale-[.98]">Descargar PDF ↓</button>`
-    : '<span class="text-xs text-crema-dim">PDF no disponible aún</span>';
+    ? `<button id="m-download" class="px-4 py-2 rounded-xl border border-caliz/40 text-caliz text-sm font-bold hover:bg-caliz/10 active:scale-[.98]">Descargar ↓</button>`
+    : '<span class="text-xs text-crema-dim">Archivo no disponible aún</span>';
 
   slider.value = b.my_score !== null ? b.my_score : 5;
   updateSliderUI();

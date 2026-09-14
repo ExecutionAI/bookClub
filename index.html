@@ -154,6 +154,7 @@ async function api(path, opts = {}) {
   return data;
 }
 function esc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function noCover(img){ const d=document.createElement('div'); d.className=img.className.replace('object-cover','').trim()+' bg-noche-surface'; img.replaceWith(d); }
 const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 function fmtDate(iso){ const d = new Date(iso); return `${d.getDate()} ${MESES[d.getMonth()]} ${d.getFullYear()}`; }
 function fmtTime(iso){ const d = new Date(iso); return d.toLocaleTimeString('es', { hour:'2-digit', minute:'2-digit' }); }
@@ -179,7 +180,7 @@ async function load(){
       document.getElementById('hero-book').innerHTML = `
         <a href="biblioteca.html?abrir=${reading.id}" class="block flota" style="--rot:2deg; --dur:7s">
           <div class="cover-wrap sombra-crema w-44 sm:w-52">
-            ${reading.cover_url ? `<img src="${esc(reading.cover_url)}" alt="${esc(reading.title)}" class="w-full h-64 sm:h-72 object-cover">` : `<div class="w-full h-64 sm:h-72 flex items-center justify-center font-display text-center p-4 text-crema-dim">${esc(reading.title)}</div>`}
+            ${reading.cover_url ? `<img src="${esc(reading.cover_url)}" alt="${esc(reading.title)}" class="w-full h-64 sm:h-72 object-cover" onerror="noCover(this)">` : `<div class="w-full h-64 sm:h-72 flex items-center justify-center font-display text-center p-4 text-crema-dim">${esc(reading.title)}</div>`}
           </div>
           <p class="mt-3 text-center text-xs uppercase tracking-[0.2em] text-caliz">estamos leyendo</p>
           <p class="text-center font-display mt-1">${esc(reading.title)}</p>
@@ -264,7 +265,7 @@ async function load(){
       carousel.innerHTML = read.map((b, i) => `
         <a href="biblioteca.html?abrir=${b.id}" class="flota block w-40 shrink-0" style="--rot:${(i % 2 ? 1.5 : -1.5)}deg; --dur:${5.5 + (i % 3)}s; --delay:${-(i * 0.7)}s">
           <div class="cover-wrap sombra-crema">
-            ${b.cover_url ? `<img src="${esc(b.cover_url)}" alt="${esc(b.title)}" class="w-40 h-60 object-cover" loading="lazy">` : `<div class="w-40 h-60 flex items-center justify-center font-display text-center p-3 text-crema-dim text-sm">${esc(b.title)}</div>`}
+            ${b.cover_url ? `<img src="${esc(b.cover_url)}" alt="${esc(b.title)}" class="w-40 h-60 object-cover" loading="lazy" onerror="noCover(this)">` : `<div class="w-40 h-60 flex items-center justify-center font-display text-center p-3 text-crema-dim text-sm">${esc(b.title)}</div>`}
             <div class="absolute bottom-0 inset-x-0 bg-noche-deep/85 backdrop-blur-sm px-3 py-2 z-10">${scoreBadge(b.avg_score, b.rating_count)}</div>
           </div>
           <p class="mt-3 text-sm font-semibold leading-snug">${esc(b.title)}</p>

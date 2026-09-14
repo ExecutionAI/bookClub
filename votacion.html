@@ -136,6 +136,7 @@ document.getElementById('back').href = `evento.html?id=${eventId}`;
 document.getElementById('w-link').href = `evento.html?id=${eventId}`;
 
 function esc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function noCover(img){ const d=document.createElement('div'); d.className=img.className.replace('object-cover','').trim()+' bg-noche-surface'; img.replaceWith(d); }
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 function fmtFull(iso){ const d = new Date(iso); return `${d.getDate()} de ${MESES[d.getMonth()]} · ${d.toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'})}`; }
@@ -209,7 +210,7 @@ function render(data){
     return `
     <article class="bg-noche-surface border ${mine ? 'border-marigold/60' : 'border-noche-line'} rounded-2xl sombra p-5 flex gap-4">
       <div class="cover-wrap w-16 sm:w-20 shrink-0 self-start">
-        ${c.book?.cover_url ? `<img src="${esc(c.book.cover_url)}" alt="" class="w-full aspect-[2/3] object-cover">` : `<div class="w-full aspect-[2/3] flex items-center justify-center font-display text-center p-2 text-crema-dim text-xs">${esc(c.book?.title || '?')}</div>`}
+        ${c.book?.cover_url ? `<img src="${esc(c.book.cover_url)}" alt="" class="w-full aspect-[2/3] object-cover" onerror="noCover(this)">` : `<div class="w-full aspect-[2/3] flex items-center justify-center font-display text-center p-2 text-crema-dim text-xs">${esc(c.book?.title || '?')}</div>`}
       </div>
       <div class="flex-1 min-w-0">
         <div class="flex items-start justify-between gap-3">
@@ -272,7 +273,7 @@ function showWinner(data){
   const w = data.winner || {};
   document.getElementById('countdown').textContent = 'la votación ya terminó';
   document.getElementById('w-cover').innerHTML = w.book?.cover_url
-    ? `<img src="${esc(w.book.cover_url)}" alt="" class="w-full aspect-[2/3] object-cover">` : '';
+    ? `<img src="${esc(w.book.cover_url)}" alt="" class="w-full aspect-[2/3] object-cover" onerror="noCover(this)">` : '';
   document.getElementById('w-title').textContent = w.book?.title || '';
   document.getElementById('w-author').textContent = w.book?.author || '';
   document.getElementById('w-by').innerHTML = w.suggested_by

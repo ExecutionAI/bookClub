@@ -133,6 +133,7 @@ document.getElementById('back').href = `evento.html?id=${eventId}`;
 document.getElementById('w-link').href = `evento.html?id=${eventId}`;
 
 function esc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function noCover(img){ const d=document.createElement('div'); d.className=img.className.replace('object-cover','').trim()+' bg-noche-surface'; img.replaceWith(d); }
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 let state = 'idle';   // idle | drawing | done
@@ -282,7 +283,7 @@ function showDone(winner, quiet){
   document.getElementById('papers').innerHTML = '';
 
   document.getElementById('w-cover').innerHTML = w.book?.cover_url
-    ? `<img src="${esc(w.book.cover_url)}" alt="" class="w-full aspect-[2/3] object-cover">` : '';
+    ? `<img src="${esc(w.book.cover_url)}" alt="" class="w-full aspect-[2/3] object-cover" onerror="noCover(this)">` : '';
   document.getElementById('w-title').textContent = w.book?.title || '';
   document.getElementById('w-author').textContent = w.book?.author || '';
   document.getElementById('w-by').innerHTML = w.suggested_by
