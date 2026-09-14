@@ -54,7 +54,7 @@ tailwind.config = {
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none!important; transition:none!important; } }
 </style>
 </head>
-<body class="grain bg-noche-deep text-crema min-h-screen flex flex-col items-center justify-center px-6 py-12 overflow-hidden">
+<body class="grain bg-noche-deep text-crema min-h-screen flex flex-col items-center justify-start sm:justify-center px-6 py-8 sm:py-12 overflow-x-hidden overflow-y-auto">
 
   <!-- drifting paper scraps in the background -->
   <div aria-hidden="true" class="fixed inset-0 pointer-events-none">
@@ -64,7 +64,7 @@ tailwind.config = {
     <div class="papelito absolute bottom-[25%] right-[9%] w-7 h-5 bg-crema/10 rounded-sm" style="--rot:-9deg; animation-delay:-1s"></div>
   </div>
 
-  <header class="text-center mb-10 relative">
+  <header id="main-header" class="text-center mb-6 sm:mb-10 relative">
     <p class="uppercase tracking-[0.3em] text-xs text-crema-dim mb-3">Ámsterdam · desde 2024</p>
     <svg class="w-9 h-9 mx-auto mb-4 text-marigold" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6L5.6 18.4" opacity=".55"/></svg>
     <h1 class="font-display text-5xl sm:text-6xl font-semibold" style="font-variation-settings:'opsz' 100;">
@@ -72,6 +72,10 @@ tailwind.config = {
     </h1>
     <p class="mt-3 text-crema-dim italic font-display">lectoras latinas pedaleando historias entre canales</p>
   </header>
+  <!-- compact header shown only during PIN step on mobile -->
+  <div id="mini-header" class="hidden text-center mb-4 sm:hidden">
+    <svg class="w-6 h-6 mx-auto text-marigold" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6L5.6 18.4" opacity=".55"/></svg>
+  </div>
 
   <!-- Step 1: pick your name -->
   <section id="step-members" class="w-full max-w-md relative">
@@ -89,9 +93,9 @@ tailwind.config = {
       <p id="pin-name" class="font-display text-xl"></p>
       <p class="text-crema-dim text-sm mt-1">Escribe tu PIN</p>
     </div>
-    <div id="pin-dots" class="flex justify-center gap-3 mb-6 h-4" aria-live="polite"></div>
+    <div id="pin-dots" class="flex justify-center gap-3 mb-4 sm:mb-6 h-4" aria-live="polite"></div>
     <p id="pin-error" class="hidden text-orquidea text-sm mb-4"></p>
-    <div class="grid grid-cols-3 gap-3">
+    <div class="grid grid-cols-3 gap-2 sm:gap-3">
       <!-- keypad injected -->
     </div>
   </section>
@@ -130,6 +134,10 @@ function pickMember(btn){
   pin = '';
   document.getElementById('step-members').classList.add('hidden');
   document.getElementById('step-pin').classList.remove('hidden');
+  if (window.innerWidth < 640) {
+    document.getElementById('main-header').style.display = 'none';
+    document.getElementById('mini-header').classList.remove('hidden');
+  }
   const av = document.getElementById('pin-avatar');
   av.textContent = selected.name[0];
   av.style.background = selected.color;
@@ -142,6 +150,8 @@ function pickMember(btn){
 document.getElementById('back-btn').addEventListener('click', () => {
   document.getElementById('step-pin').classList.add('hidden');
   document.getElementById('step-members').classList.remove('hidden');
+  document.getElementById('main-header').style.display = '';
+  document.getElementById('mini-header').classList.add('hidden');
 });
 
 function renderDots(){
@@ -154,9 +164,9 @@ function renderKeypad(){
   const pad = document.querySelector('#step-pin .grid');
   const keys = ['1','2','3','4','5','6','7','8','9','borrar','0','entrar'];
   pad.innerHTML = keys.map(k => {
-    if (k === 'borrar') return `<button data-key="del" class="pin-key h-16 rounded-2xl bg-noche-surface border border-noche-line text-crema-dim text-sm">borrar</button>`;
-    if (k === 'entrar') return `<button data-key="ok" class="pin-key h-16 rounded-2xl bg-marigold text-noche-deep font-bold text-sm">entrar</button>`;
-    return `<button data-key="${k}" class="pin-key h-16 rounded-2xl bg-noche-surface border border-noche-line font-display text-2xl">${k}</button>`;
+    if (k === 'borrar') return `<button data-key="del" class="pin-key h-12 sm:h-16 rounded-2xl bg-noche-surface border border-noche-line text-crema-dim text-sm">borrar</button>`;
+    if (k === 'entrar') return `<button data-key="ok" class="pin-key h-12 sm:h-16 rounded-2xl bg-marigold text-noche-deep font-bold text-sm">entrar</button>`;
+    return `<button data-key="${k}" class="pin-key h-12 sm:h-16 rounded-2xl bg-noche-surface border border-noche-line font-display text-2xl">${k}</button>`;
   }).join('');
   pad.querySelectorAll('button').forEach(b => b.addEventListener('click', () => pressKey(b.dataset.key)));
 }
