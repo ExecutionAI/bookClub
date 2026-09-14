@@ -28,13 +28,20 @@ const MEMBERS = [
 ];
 
 const PAST_BOOKS = [
-  // {
-  //   title: 'Cien años de soledad', author: 'Gabriel García Márquez', year: 1967,
-  //   isbn: '9780307474728',            // used to auto-fill the cover if cover_url is empty
-  //   cover_url: null,                  // optional override
-  //   event_date: '2026-02-28',         // when the club met to discuss it
-  //   location: 'Café Belén, De Pijp',
-  // },
+  // event_date = primer día del mes (placeholder — actualizar a fechas reales antes de ejecutar)
+  { title: 'Cadáver exquisito',                   author: 'Agustina Bazterrica',   year: 2017, cover_url: 'https://covers.openlibrary.org/b/id/15242766-L.jpg', event_date: '2025-09-01' },
+  { title: 'Dioses de Jade y Sombra',             author: 'Silvia Moreno García',  year: 2019, isbn: '9780525620778', event_date: '2025-10-01' },
+  { title: 'Las crónicas de un gato viajero',     author: 'Hiro Arikawa',          year: 2012, isbn: '9780857524195', event_date: '2025-11-01' },
+  { title: 'The Housemaid',                       author: 'Freida McFadden',        year: 2022, cover_url: 'https://covers.openlibrary.org/b/id/14745848-L.jpg', event_date: '2025-12-01' },
+  { title: 'La biblioteca de medianoche',         author: 'Matt Haig',              year: 2020, isbn: '9780525559474', event_date: '2026-01-01' },
+  { title: 'Pachinko',                            author: 'Min Jin Lee',            year: 2017, isbn: '9781455563920', event_date: '2026-02-01' },
+  { title: 'La vegetariana',                      author: 'Han Kang',               year: 2007, isbn: '9780553448184', event_date: '2026-03-01' },
+  { title: 'La mala costumbre',                   author: 'Alana S. Portero',       year: 2023, cover_url: 'https://covers.openlibrary.org/b/id/14271576-L.jpg', event_date: '2026-04-01' },
+  { title: 'La canción de Aquiles',               author: 'Madeline Miller',        year: 2011, isbn: '9780062060624', event_date: '2026-05-01' },
+  { title: 'Funny Story',                         author: 'Emily Henry',            year: 2024, isbn: '9780593441282', event_date: '2026-06-01' },
+  { title: 'Yo que nunca supe de los hombres',    author: 'Jacqueline Harpman',     year: 1995, cover_url: 'https://covers.openlibrary.org/b/id/14052201-L.jpg', event_date: '2026-07-01' },
+  { title: 'Ministry of Time',                    author: 'Kaliane Bradley',        year: 2024, isbn: '9781668045152', event_date: '2026-08-01' },
+  { title: 'Solaris',                             author: 'Stanisław Lem',          year: 1961, isbn: '9780156027601', event_date: '2026-09-01' },
 ];
 
 const RATINGS = [
