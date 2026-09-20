@@ -305,9 +305,10 @@ app.get('/api/events/:id', requireMember, async (req, res) => {
     const { data: event } = await supabase.from('events').select('*').eq('id', req.params.id).single();
     if (!event) return res.status(404).json({ error: 'Evento no encontrado' });
 
-    const [suggestionsQ, attendanceQ] = await Promise.all([
+    const [suggestionsQ, attendanceQ, rsvpQ] = await Promise.all([
       supabase.from('suggestions').select('id, member_id, book_id').eq('event_id', event.id),
       supabase.from('attendance').select('member_id').eq('event_id', event.id),
+      supabase.from('event_rsvp').select('member_id, going').eq('event_id', event.id),
     ]);
     const suggestions = suggestionsQ.data || [];
 
@@ -350,6 +351,17 @@ app.get('/api/events/:id', requireMember, async (req, res) => {
       attendees = ms || [];
     }
 
+    // RSVP — member's own intent + who's going
+    const rsvps = rsvpQ.data || [];
+    const myRsvpRow = rsvps.find(r => String(r.member_id) === String(req.member.id));
+    const my_rsvp = myRsvpRow !== undefined ? myRsvpRow.going : null;
+    const goingIds = rsvps.filter(r => r.going).map(r => r.member_id);
+    let rsvp_going = [];
+    if (goingIds.length) {
+      const { data: goingMs } = await supabase.from('members').select('name, avatar_color').in('id', goingIds);
+      rsvp_going = goingMs || [];
+    }
+
     res.json({
       ...event,
       winning_book,
@@ -358,7 +370,35 @@ app.get('/api/events/:id', requireMember, async (req, res) => {
       locked,
       suggestion_count: suggestions.length,
       attendees,
+      my_rsvp,
+      rsvp_going,
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// RSVP — member registers attendance intent (going: true / false)
+app.put('/api/events/:id/rsvp', requireMember, async (req, res) => {
+  const { going } = req.body;
+  if (typeof going !== 'boolean') return res.status(400).json({ error: 'going (boolean) es requerido' });
+  try {
+    const { data: event } = await supabase.from('events').select('status').eq('id', req.params.id).single();
+    if (!event) return res.status(404).json({ error: 'Evento no encontrado' });
+    if (!['planned', 'raffled'].includes(event.status)) return res.status(400).json({ error: 'Solo puedes registrar asistencia para eventos futuros' });
+    const { error } = await supabase.from('event_rsvp')
+      .upsert({ event_id: req.params.id, member_id: req.member.id, going, updated_at: new Date().toISOString() }, { onConflict: 'event_id,member_id' });
+    if (error) throw error;
+    res.json({ success: true, going });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/events/:id/rsvp', requireMember, async (req, res) => {
+  try {
+    await supabase.from('event_rsvp').delete().eq('event_id', req.params.id).eq('member_id', req.member.id);
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

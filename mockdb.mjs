@@ -13,6 +13,7 @@ const UNIQUE = {
   suggestions: [],
   ratings: [['member_id', 'book_id']],
   attendance: [['event_id', 'member_id']],
+  event_rsvp: [['event_id', 'member_id']],
   votes: [['event_id', 'member_id', 'suggestion_id', 'round']],
 };
 
@@ -106,7 +107,7 @@ class Query {
       const inserted = [];
       for (const raw of this._action.rows) {
         const row = { ...raw };
-        if (!('id' in row) && this.table !== 'attendance' && this.table !== 'sessions') row.id = uuid();
+        if (!('id' in row) && this.table !== 'attendance' && this.table !== 'sessions' && this.table !== 'event_rsvp') row.id = uuid();
         if (!row.created_at) row.created_at = new Date().toISOString();
         const err = this._uniqueViolation(row);
         if (err) return { data: null, error: { message: err } };
@@ -165,7 +166,7 @@ class Query {
 }
 
 export function createMockClient() {
-  const db = { tables: { members: [], sessions: [], books: [], events: [], suggestions: [], ratings: [], attendance: [], votes: [], photos: [], event_materials: [] } };
+  const db = { tables: { members: [], sessions: [], books: [], events: [], suggestions: [], ratings: [], attendance: [], event_rsvp: [], votes: [], photos: [], event_materials: [] } };
   const files = new Map();
 
   seedDemo(db);

@@ -139,8 +139,8 @@ function render(){
   const mapLink = ev.location ? `<a class="text-caliz hover:underline" target="_blank" rel="noopener" href="https://maps.google.com/?q=${encodeURIComponent(ev.location + ' Amsterdam')}">${esc(ev.location)} ↗</a>` : 'Lugar por confirmar';
 
   let body = '';
-  if (ev.status === 'planned') body = plannedSection();
-  else if (ev.status === 'raffled') body = winnerSection('Este es el elegido — ¡a leer!');
+  if (ev.status === 'planned') body = rsvpSection() + plannedSection();
+  else if (ev.status === 'raffled') body = rsvpSection() + winnerSection('Este es el elegido — ¡a leer!');
   else if (ev.status === 'completed') body = winnerSection('El libro de este encuentro') + attendeesSection() + '<div id="event-photos-section" class="mt-6"></div>';
   else body = '<p class="text-crema-dim">Este evento fue cancelado.</p>';
   if (ev.status !== 'cancelled') body += '<div id="event-materials-section" class="mt-6"></div>';
@@ -163,8 +163,77 @@ function render(){
     ${body}`;
 
   if (ev.status === 'planned') wireSuggestionForm();
+  if (['planned', 'raffled'].includes(ev.status)) wireRsvpButtons();
   if (ev.status === 'completed') loadEventPhotos();
   if (ev.status !== 'cancelled') loadEventMaterials();
+}
+
+// ── RSVP ─────────────────────────────────────────────────────────────────────
+
+function rsvpSection() {
+  const going = ev.my_rsvp === true;
+  const notGoing = ev.my_rsvp === false;
+  const goingCount = ev.rsvp_going?.length || 0;
+
+  const avatars = (ev.rsvp_going || []).map(m =>
+    `<span title="${esc(m.name)}" class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-noche-deep shrink-0" style="background:${esc(m.avatar_color || '#d9a441')}">${esc(m.name[0])}</span>`
+  ).join('');
+
+  const goingText = goingCount === 0
+    ? 'Sé la primera en confirmar'
+    : goingCount === 1
+    ? '1 persona confirma asistencia'
+    : `${goingCount} personas confirman asistencia`;
+
+  return `
+    <section class="bg-noche-surface border border-noche-line rounded-2xl sombra p-5 sm:p-6 mb-8">
+      <div class="flex items-start justify-between gap-4 flex-wrap">
+        <div class="min-w-0">
+          <h2 class="font-display text-xl mb-0.5">¿Vas a venir?</h2>
+          <p id="rsvp-going-text" class="text-sm text-crema-dim">${goingText}</p>
+        </div>
+        <div class="flex gap-2 shrink-0">
+          <button id="rsvp-yes"
+            class="px-4 py-2 rounded-xl text-sm font-bold border active:scale-[.97] transition-[transform,background-color,color,border-color] ${going ? 'bg-marigold text-noche-deep border-marigold' : 'border-noche-line text-crema-dim hover:border-marigold/60 hover:text-crema'}">
+            Sí, iré 🙌
+          </button>
+          <button id="rsvp-no"
+            class="px-4 py-2 rounded-xl text-sm font-bold border active:scale-[.97] transition-[transform,background-color,color,border-color] ${notGoing ? 'bg-orquidea/20 text-orquidea border-orquidea/50' : 'border-noche-line text-crema-dim hover:border-orquidea/40 hover:text-crema'}">
+            No puedo 😔
+          </button>
+        </div>
+      </div>
+      ${goingCount > 0 ? `<div class="mt-4 flex items-center gap-2 flex-wrap">${avatars}</div>` : ''}
+    </section>`;
+}
+
+async function wireRsvpButtons() {
+  const yesBtn = document.getElementById('rsvp-yes');
+  const noBtn  = document.getElementById('rsvp-no');
+  if (!yesBtn || !noBtn) return;
+
+  async function setRsvp(going) {
+    yesBtn.disabled = true;
+    noBtn.disabled  = true;
+    try {
+      await api(`/api/events/${eventId}/rsvp`, { method: 'PUT', body: JSON.stringify({ going }) });
+      ev.my_rsvp = going;
+      if (going) {
+        if (!ev.rsvp_going.some(m => m.name === me?.name)) {
+          ev.rsvp_going = [...(ev.rsvp_going || []), { name: me.name, avatar_color: me.avatar_color }];
+        }
+      } else {
+        ev.rsvp_going = (ev.rsvp_going || []).filter(m => m.name !== me?.name);
+      }
+      render();
+    } catch (e) {
+      yesBtn.disabled = false;
+      noBtn.disabled  = false;
+    }
+  }
+
+  yesBtn.addEventListener('click', () => setRsvp(true));
+  noBtn.addEventListener('click',  () => setRsvp(false));
 }
 
 // ── Planned: suggestion form + goblet status ─────────────────────────────────
