@@ -220,6 +220,10 @@ function render(data){
             <h3 class="font-semibold leading-snug">${esc(c.book?.title || '?')}</h3>
             <p class="text-sm text-crema-dim">${esc(c.book?.author || '')}</p>
             <p class="text-xs text-crema-dim mt-1">propuesto por <span class="text-crema">${esc(c.suggested_by)}</span></p>
+            ${c.book?.description ? `<div class="mt-2">
+              <p id="desc-${c.suggestion_id}" class="text-xs text-crema-dim leading-relaxed" style="-webkit-line-clamp:3;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;">${esc(c.book.description)}</p>
+              <button onclick="(function(btn){var p=document.getElementById('desc-${c.suggestion_id}');var open=p.style.webkitLineClamp==='unset';p.style.webkitLineClamp=open?'3':'unset';p.style.overflow=open?'hidden':'visible';btn.textContent=open?'ver más':'ver menos';})(this)" class="mt-1 text-xs text-marigold/70 hover:text-marigold focus-visible:text-marigold active:scale-95 transition-[color,transform]">ver más</button>
+            </div>` : ''}
           </div>
           <button class="vote-btn shrink-0 px-4 py-2 rounded-xl text-sm font-bold active:scale-[.97] ${mine
             ? 'bg-marigold text-noche-deep'

@@ -552,7 +552,7 @@ app.get('/api/events/:id/votes', requireMember, async (req, res) => {
     const bookIds = candidates.map(s => s.book_id);
     let booksById = {};
     if (bookIds.length) {
-      const { data: books } = await supabase.from('books').select('id, title, author, cover_url').in('id', bookIds);
+      const { data: books } = await supabase.from('books').select('id, title, author, cover_url, description').in('id', bookIds);
       booksById = Object.fromEntries((books || []).map(b => [b.id, b]));
     }
 
