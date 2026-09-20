@@ -41,12 +41,19 @@ ensureBucket();
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 30 * 1024 * 1024 } });
 
-// Serve mock-stored PDFs when running without Supabase
+// Serve mock-stored PDFs/photos when running without Supabase
 if (useMock) {
   app.get('/mock-pdf/:path', (req, res) => {
     const buffer = supabase.storage._files.get(decodeURIComponent(req.params.path));
     if (!buffer) return res.status(404).json({ error: 'Not found' });
     res.set('Content-Type', 'application/pdf');
+    res.send(buffer);
+  });
+  app.get('/mock-photo/:path', (req, res) => {
+    const buffer = supabase.storage._files.get(decodeURIComponent(req.params.path));
+    if (!buffer) return res.status(404).json({ error: 'Not found' });
+    const ext = req.params.path.split('.').pop().toLowerCase();
+    res.set('Content-Type', ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg');
     res.send(buffer);
   });
 }
@@ -1126,6 +1133,115 @@ app.post('/api/admin/books/:id/pdf', requireAdmin, upload.single('file'), async 
       .single();
     if (error) throw error;
     res.json({ success: true, book: data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Photos ────────────────────────────────────────────────────────────────────
+
+const PHOTO_ALLOWED = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
+
+// Upload photo — multipart field "file"; form fields: event_id?, caption?
+app.post('/api/admin/photos', requireAdmin, upload.single('file'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'file is required' });
+  const ext = PHOTO_ALLOWED[req.file.mimetype];
+  if (!ext) return res.status(400).json({ error: 'Solo se permiten imágenes JPEG, PNG o WEBP' });
+  try {
+    const id = crypto.randomUUID();
+    const path = `photos/${id}.${ext}`;
+    const { error: upErr } = await supabase.storage.from(PDF_BUCKET).upload(path, req.file.buffer, {
+      contentType: req.file.mimetype, upsert: false,
+    });
+    if (upErr) throw upErr;
+    const { data, error } = await supabase.from('photos').insert({
+      id, path,
+      event_id: req.body.event_id || null,
+      caption: req.body.caption?.trim() || null,
+      uploaded_at: new Date().toISOString(),
+    }).select().single();
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// List all photos for admin (includes signed URLs + event info)
+app.get('/api/admin/photos', requireAdmin, async (req, res) => {
+  try {
+    const { data: photos, error } = await supabase.from('photos').select('*').order('uploaded_at', { ascending: false });
+    if (error) throw error;
+    const eventIds = [...new Set((photos || []).map(p => p.event_id).filter(Boolean))];
+    let eventsById = {};
+    if (eventIds.length) {
+      const { data: evs } = await supabase.from('events').select('id, title, event_at').in('id', eventIds);
+      eventsById = Object.fromEntries((evs || []).map(e => [e.id, e]));
+    }
+    const withUrls = await Promise.all((photos || []).map(async p => {
+      const { data: signed } = await supabase.storage.from(PDF_BUCKET).createSignedUrl(p.path, 3600);
+      return { ...p, url: signed?.signedUrl || null, event: eventsById[p.event_id] || null };
+    }));
+    res.json(withUrls);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// List all photos (member — no URLs, gallery fetches them on demand)
+app.get('/api/photos', requireMember, async (req, res) => {
+  try {
+    const { data: photos, error } = await supabase.from('photos').select('*').order('uploaded_at', { ascending: false });
+    if (error) throw error;
+    const eventIds = [...new Set((photos || []).map(p => p.event_id).filter(Boolean))];
+    let eventsById = {};
+    if (eventIds.length) {
+      const { data: evs } = await supabase.from('events').select('id, title, event_at').in('id', eventIds);
+      eventsById = Object.fromEntries((evs || []).map(e => [e.id, e]));
+    }
+    res.json((photos || []).map(p => ({ ...p, event: eventsById[p.event_id] || null })));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Photos for a specific event — with signed URLs (member)
+app.get('/api/events/:id/photos', requireMember, async (req, res) => {
+  try {
+    const { data: photos, error } = await supabase.from('photos').select('*').eq('event_id', req.params.id).order('uploaded_at', { ascending: true });
+    if (error) throw error;
+    const withUrls = await Promise.all((photos || []).map(async p => {
+      const { data: signed } = await supabase.storage.from(PDF_BUCKET).createSignedUrl(p.path, 3600);
+      return { ...p, url: signed?.signedUrl || null };
+    }));
+    res.json(withUrls);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Signed URL for a single photo (member, gallery lazy-load)
+app.get('/api/photos/:id/url', requireMember, async (req, res) => {
+  try {
+    const { data: photo } = await supabase.from('photos').select('path').eq('id', req.params.id).single();
+    if (!photo) return res.status(404).json({ error: 'Photo not found' });
+    const { data, error } = await supabase.storage.from(PDF_BUCKET).createSignedUrl(photo.path, 3600);
+    if (error) throw error;
+    res.json({ url: data.signedUrl });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete photo + remove from storage (admin)
+app.delete('/api/admin/photos/:id', requireAdmin, async (req, res) => {
+  try {
+    const { data: photo } = await supabase.from('photos').select('path').eq('id', req.params.id).single();
+    if (!photo) return res.status(404).json({ error: 'Photo not found' });
+    await supabase.storage.from(PDF_BUCKET).remove([photo.path]);
+    const { error } = await supabase.from('photos').delete().eq('id', req.params.id);
+    if (error) throw error;
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

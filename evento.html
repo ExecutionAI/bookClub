@@ -65,6 +65,7 @@ tailwind.config = {
         <a class="nav-link" href="index.html">Inicio</a>
         <a class="nav-link" href="biblioteca.html">Biblioteca</a>
         <a class="nav-link" href="ranking.html">Ranking</a>
+        <a class="nav-link" href="galeria.html">Galería</a>
         <a class="nav-link" href="reglas.html">Reglas</a>
       </div>
       <a class="nav-link flex items-center gap-2" href="perfil.html"><span id="nav-avatar" class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-noche-deep" style="background:#d9a441"></span><span class="hidden sm:inline" id="nav-name"></span></a>
@@ -79,6 +80,7 @@ tailwind.config = {
       <a class="nav-link py-3 border-b border-noche-line/40" href="index.html">Inicio</a>
       <a class="nav-link py-3 border-b border-noche-line/40" href="biblioteca.html">Biblioteca</a>
       <a class="nav-link py-3 border-b border-noche-line/40" href="ranking.html">Ranking</a>
+      <a class="nav-link py-3 border-b border-noche-line/40" href="galeria.html">Galería</a>
       <a class="nav-link py-3 border-b border-noche-line/40" href="reglas.html">Reglas</a>
       <a class="nav-link py-3" href="perfil.html">Mi perfil</a>
     </div>
@@ -139,7 +141,7 @@ function render(){
   let body = '';
   if (ev.status === 'planned') body = plannedSection();
   else if (ev.status === 'raffled') body = winnerSection('Este es el elegido — ¡a leer!');
-  else if (ev.status === 'completed') body = winnerSection('El libro de este encuentro') + attendeesSection();
+  else if (ev.status === 'completed') body = winnerSection('El libro de este encuentro') + attendeesSection() + '<div id="event-photos-section" class="mt-6"></div>';
   else body = '<p class="text-crema-dim">Este evento fue cancelado.</p>';
 
   c.innerHTML = `
@@ -160,6 +162,7 @@ function render(){
     ${body}`;
 
   if (ev.status === 'planned') wireSuggestionForm();
+  if (ev.status === 'completed') loadEventPhotos();
 }
 
 // ── Planned: suggestion form + goblet status ─────────────────────────────────
@@ -375,6 +378,25 @@ function attendeesSection(){
           <span class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-noche-deep" style="background:${esc(a.avatar_color || '#d9a441')}">${esc(a.name[0])}</span>${esc(a.name)}</span>`).join('')}
       </div>
     </section>`;
+}
+
+async function loadEventPhotos(){
+  try {
+    const photos = await api(`/api/events/${eventId}/photos`);
+    const box = document.getElementById('event-photos-section');
+    if (!box || !photos.length) return;
+    box.innerHTML = `
+      <section class="bg-noche-surface border border-noche-line rounded-2xl sombra p-6 sm:p-8">
+        <h2 class="font-display text-2xl mb-4">Fotos del encuentro</h2>
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          ${photos.map(p => `
+            <figure class="rounded-xl overflow-hidden sombra">
+              <img src="${esc(p.url)}" class="w-full aspect-[4/3] object-cover" alt="${esc(p.caption || '')}" loading="lazy" onerror="this.style.display='none'">
+              ${p.caption ? `<figcaption class="px-3 py-2 text-xs text-crema-dim font-display italic">${esc(p.caption)}</figcaption>` : ''}
+            </figure>`).join('')}
+        </div>
+      </section>`;
+  } catch { /* photos are optional, fail silently */ }
 }
 
 load();

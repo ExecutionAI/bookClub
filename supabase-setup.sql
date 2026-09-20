@@ -173,3 +173,15 @@ ALTER TABLE bookclub.suggestions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE bookclub.votes       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE bookclub.ratings     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE bookclub.attendance  ENABLE ROW LEVEL SECURITY;
+
+-- 12. Photos — admin-uploaded club photos, optionally linked to an event.
+-- Stored in bookclub-pdfs bucket at path photos/{uuid}.{jpg|png|webp}
+CREATE TABLE IF NOT EXISTS bookclub.photos (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  path        text NOT NULL,
+  event_id    uuid REFERENCES bookclub.events(id) ON DELETE SET NULL,
+  caption     text,
+  uploaded_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE bookclub.photos ENABLE ROW LEVEL SECURITY;
+GRANT ALL ON bookclub.photos TO service_role;

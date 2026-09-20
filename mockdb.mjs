@@ -165,7 +165,7 @@ class Query {
 }
 
 export function createMockClient() {
-  const db = { tables: { members: [], sessions: [], books: [], events: [], suggestions: [], ratings: [], attendance: [], votes: [] } };
+  const db = { tables: { members: [], sessions: [], books: [], events: [], suggestions: [], ratings: [], attendance: [], votes: [], photos: [] } };
   const files = new Map();
 
   seedDemo(db);
@@ -179,9 +179,19 @@ export function createMockClient() {
       createBucket: async () => ({ data: null, error: null }),
       from: () => ({
         upload: async (path, buffer) => { files.set(path, buffer); return { data: { path }, error: null }; },
-        createSignedUrl: async (path) => files.has(path)
-          ? { data: { signedUrl: `/mock-pdf/${encodeURIComponent(path)}` }, error: null }
-          : { data: null, error: { message: 'Object not found' } },
+        createSignedUrl: async (path) => {
+          if (files.has(path)) {
+            const route = path.startsWith('photos/') ? 'mock-photo' : 'mock-pdf';
+            return { data: { signedUrl: `/${route}/${encodeURIComponent(path)}` }, error: null };
+          }
+          // Demo photos that aren't in the files map get a placeholder image
+          if (path.startsWith('photos/')) {
+            const colors = ['2a1f47/d9a441', '3d2f61/c9679a', '1e1533/f5c96b'];
+            const idx = path.charCodeAt(7) % 3;
+            return { data: { signedUrl: `https://placehold.co/800x600/${colors[idx]}?text=📸` }, error: null };
+          }
+          return { data: null, error: { message: 'Object not found' } };
+        },
         remove: async (paths) => { paths.forEach(p => files.delete(p)); return { data: null, error: null }; },
       }),
     },
@@ -288,6 +298,13 @@ function seedDemo(db) {
     R(paola, pedro, 7.5), R(diego, pedro, 9, 'Denso pero brutal.'), R(luz, pedro, 6.5), R(vale, pedro, 7),
     R(paola, agua, 8), R(caro, agua, 8.5), R(luz, agua, 9), R(vale, agua, 9.5, 'Lloré con las recetas.'),
     R(paola, sombra, 9), R(caro, sombra, 8.5), R(diego, sombra, 8), R(mateo, sombra, 9.5), R(vale, sombra, 9),
+  ];
+
+  const pid1 = uuid(), pid2 = uuid(), pid3 = uuid();
+  db.tables.photos = [
+    { id: pid1, path: `photos/${pid1}.jpg`, event_id: evts[0].id, caption: 'Así arrancó todo — Cien años de soledad', uploaded_at: evts[0].event_at },
+    { id: pid2, path: `photos/${pid2}.jpg`, event_id: evts[4].id, caption: 'Picnic con Agua para chocolate en el parque', uploaded_at: evts[4].event_at },
+    { id: pid3, path: `photos/${pid3}.jpg`, event_id: null, caption: null, uploaded_at: new Date().toISOString() },
   ];
 
   const A = (event, ...ms) => ms.map(m => ({ event_id: event.id, member_id: m.id, created_at: new Date().toISOString() }));

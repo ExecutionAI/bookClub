@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Galería — Entre bicis y libros</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: { extend: {
+    colors: {
+      noche: { DEFAULT:'#1e1533', deep:'#150e24', surface:'#2a1f47', line:'#3d2f61' },
+      crema: { DEFAULT:'#f7f0e6', dim:'#b5a9cf' },
+      marigold: '#d9a441',
+      orquidea: '#c9679a',
+      caliz: '#f5c96b',
+    },
+    fontFamily: { display:['Fraunces','Georgia','serif'], body:['Karla','system-ui','sans-serif'] },
+  }}
+};
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Karla:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
+<style>
+  body {
+    font-family:'Karla',system-ui,sans-serif;
+    background-image:
+      radial-gradient(ellipse 70% 45% at 92% 0%, rgba(217,164,65,.09) 0%, transparent 60%),
+      radial-gradient(ellipse 55% 40% at 6% 100%, rgba(201,103,154,.07) 0%, transparent 55%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Crect x='20' y='30' width='9' height='52' rx='1' fill='%23d9a441' opacity='.08'/%3E%3Crect x='31' y='24' width='7' height='58' rx='1' fill='%23f7f0e6' opacity='.06'/%3E%3Crect x='40' y='34' width='11' height='48' rx='1' fill='%23c9679a' opacity='.07'/%3E%3Crect x='53' y='27' width='8' height='55' rx='1' fill='%23d9a441' opacity='.05'/%3E%3Cg fill='none' stroke='%23d9a441' stroke-width='1.2' opacity='.08'%3E%3Cpath d='M188 42 L165 37 L165 72 L188 77 Z'/%3E%3Cpath d='M188 42 L211 37 L211 72 L188 77 Z'/%3E%3Cline x1='188' y1='37' x2='188' y2='77'/%3E%3C/g%3E%3Crect x='170' y='175' width='9' height='52' rx='1' fill='%23c9679a' opacity='.07'/%3E%3Crect x='181' y='169' width='7' height='58' rx='1' fill='%23d9a441' opacity='.06'/%3E%3Crect x='190' y='178' width='11' height='49' rx='1' fill='%23f7f0e6' opacity='.05'/%3E%3C/svg%3E");
+    background-size: 100% 100%, 100% 100%, 260px 260px;
+    background-attachment: fixed;
+    background-repeat: no-repeat, no-repeat, repeat;
+  }
+  .font-display { font-family:'Fraunces',Georgia,serif; }
+  .grain::before {
+    content:''; position:fixed; inset:0; pointer-events:none; z-index:50; opacity:.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  }
+  .sombra { box-shadow: 0 1px 2px rgba(10,6,20,.55), 0 10px 30px -10px rgba(10,6,20,.7), 0 24px 60px -20px rgba(217,164,65,.08); }
+  :focus-visible { outline:2px solid #d9a441; outline-offset:2px; border-radius:4px; }
+  .nav-link { padding:.35rem .7rem; border-radius:9999px; color:#b5a9cf; transition:color .15s ease; }
+  .nav-link:hover { color:#f7f0e6; }
+  .nav-link.active { color:#f7f0e6; background:#2a1f47; }
+
+  /* ── Scrapbook photo cards ────────────────────────────────────────────── */
+  .photo-card {
+    break-inside: avoid;
+    transition: transform .25s ease, box-shadow .25s ease, z-index 0s;
+    position: relative;
+  }
+  .photo-card:hover {
+    transform: rotate(0deg) scale(1.04) !important;
+    box-shadow: 0 4px 12px rgba(10,6,20,.7), 0 24px 60px -10px rgba(10,6,20,.85), 0 0 0 1px rgba(217,164,65,.25);
+    z-index: 20;
+  }
+
+  /* Tape corner decoration (top-center) */
+  .photo-card::before {
+    content: '';
+    position: absolute;
+    top: -7px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 36px;
+    height: 14px;
+    background: rgba(245,201,107,.22);
+    border-radius: 2px;
+    backdrop-filter: blur(2px);
+    border: 1px solid rgba(245,201,107,.18);
+    z-index: 1;
+  }
+
+  @keyframes shimmer {
+    0%,100% { opacity:.35; }
+    50% { opacity:.6; }
+  }
+  .shimmer { animation: shimmer 1.6s ease-in-out infinite; }
+
+  .photo-img {
+    opacity: 0;
+    transition: opacity .5s ease;
+  }
+  .photo-img.loaded { opacity: 1; }
+
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none!important; transition:none!important; } }
+</style>
+</head>
+<body class="grain bg-noche-deep text-crema min-h-screen">
+
+<nav class="sticky top-0 z-40 bg-noche-deep/85 backdrop-blur border-b border-noche-line">
+  <div class="max-w-6xl mx-auto px-5 h-14 flex items-center justify-between gap-3">
+    <a href="index.html" class="font-display text-lg whitespace-nowrap flex items-center gap-2">
+      <svg class="w-5 h-5 text-marigold shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6L5.6 18.4" opacity=".55"/></svg>
+      Entre bicis <em class="italic text-marigold">y libros</em>
+    </a>
+    <div class="flex items-center gap-2">
+      <div class="hidden sm:flex items-center gap-1 text-sm">
+        <a class="nav-link" href="index.html">Inicio</a>
+        <a class="nav-link" href="biblioteca.html">Biblioteca</a>
+        <a class="nav-link" href="ranking.html">Ranking</a>
+        <a class="nav-link active" href="galeria.html">Galería</a>
+        <a class="nav-link" href="reglas.html">Reglas</a>
+      </div>
+      <a class="nav-link flex items-center gap-2" href="perfil.html"><span id="nav-avatar" class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-noche-deep" style="background:#d9a441"></span><span class="hidden sm:inline" id="nav-name"></span></a>
+      <button id="nav-hamburger" aria-label="Menú" aria-expanded="false" class="sm:hidden w-9 h-9 flex items-center justify-center rounded-xl text-crema-dim hover:text-crema hover:bg-noche-surface active:scale-95 transition-[transform,color,background-color]">
+        <svg id="icon-menu" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M4 12h16M4 17h16"/></svg>
+        <svg id="icon-close" class="hidden w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+  </div>
+  <div id="nav-mobile-menu" class="hidden sm:hidden border-t border-noche-line bg-noche-surface/95 backdrop-blur-md">
+    <div class="max-w-6xl mx-auto px-5 py-3 flex flex-col">
+      <a class="nav-link py-3 border-b border-noche-line/40" href="index.html">Inicio</a>
+      <a class="nav-link py-3 border-b border-noche-line/40" href="biblioteca.html">Biblioteca</a>
+      <a class="nav-link py-3 border-b border-noche-line/40" href="ranking.html">Ranking</a>
+      <a class="nav-link active py-3 border-b border-noche-line/40" href="galeria.html">Galería</a>
+      <a class="nav-link py-3 border-b border-noche-line/40" href="reglas.html">Reglas</a>
+      <a class="nav-link py-3" href="perfil.html">Mi perfil</a>
+    </div>
+  </div>
+</nav>
+
+<main class="max-w-6xl mx-auto px-5 pb-24">
+
+  <header class="pt-14 pb-12 text-center relative">
+    <p class="uppercase tracking-[0.3em] text-xs text-crema-dim mb-4">Entre bicis y libros</p>
+    <h1 class="font-display text-5xl sm:text-6xl font-semibold" style="font-variation-settings:'opsz' 120;">
+      El álbum del club
+    </h1>
+    <div class="mt-3 flex items-center justify-center gap-3 text-crema-dim text-sm">
+      <span class="text-marigold select-none">✦</span>
+      <span id="gallery-subtitle">Cargando…</span>
+      <span class="text-marigold select-none">✦</span>
+    </div>
+  </header>
+
+  <div id="gallery" class="columns-2 sm:columns-3 lg:columns-4 gap-4"></div>
+
+</main>
+
+<script>
+const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+  ? 'http://localhost:3001' : 'https://entrebicisylibros.com';
+const token = localStorage.getItem('bcToken');
+const me = (() => { try { return JSON.parse(localStorage.getItem('bcMember')); } catch { return null; } })();
+
+if (me) {
+  document.getElementById('nav-avatar').textContent = me.name[0];
+  document.getElementById('nav-avatar').style.background = me.avatar_color || '#d9a441';
+  document.getElementById('nav-name').textContent = me.name;
+}
+
+async function api(path, opts = {}) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...opts,
+    headers: { 'x-member-token': token || '', 'Content-Type': 'application/json', ...(opts.headers || {}) },
+  });
+  if (res.status === 401) { localStorage.removeItem('bcToken'); localStorage.removeItem('bcMember'); location.href = 'login.html'; throw new Error('401'); }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Error de conexión');
+  return data;
+}
+
+function esc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+function fmtDate(iso){ if (!iso) return ''; const d = new Date(iso); return `${d.getDate()} ${MESES[d.getMonth()]} ${d.getFullYear()}`; }
+
+const ROTS = ['-.7deg', '.5deg', '-1.2deg', '.8deg', '-1.5deg', '.4deg', '-.9deg', '1.1deg'];
+
+async function load() {
+  const gallery = document.getElementById('gallery');
+  const subtitle = document.getElementById('gallery-subtitle');
+
+  if (!token) {
+    subtitle.textContent = '';
+    gallery.innerHTML = `
+      <div class="col-span-full text-center py-24">
+        <p class="font-display text-2xl mb-3 text-crema-dim italic">El álbum es solo para el club</p>
+        <p class="text-crema-dim text-sm mb-6">Inicia sesión para ver las fotos.</p>
+        <a href="login.html" class="inline-block bg-marigold text-noche-deep font-bold text-sm px-6 py-3 rounded-xl hover:brightness-110 active:scale-[.98] transition-[filter]">Iniciar sesión</a>
+      </div>`;
+    return;
+  }
+
+  try {
+    const photos = await api('/api/photos');
+
+    if (!photos.length) {
+      subtitle.textContent = 'El álbum está esperando su primera foto';
+      gallery.innerHTML = `<p class="col-span-full text-center py-20 font-display italic text-crema-dim text-xl">Pronto habrá recuerdos aquí…</p>`;
+      return;
+    }
+
+    const years = photos.map(p => new Date(p.uploaded_at).getFullYear());
+    const minYear = Math.min(...years);
+    subtitle.textContent = `${photos.length} foto${photos.length === 1 ? '' : 's'} · desde ${minYear}`;
+
+    gallery.innerHTML = photos.map((p, i) => `
+      <div class="photo-card mb-5 bg-noche-surface border border-noche-line rounded-2xl p-2.5 pb-3 sombra"
+           style="transform: rotate(${ROTS[i % ROTS.length]})" data-photo-id="${p.id}">
+        <div class="rounded-xl overflow-hidden bg-noche-deep shimmer" id="wrap-${p.id}"
+             style="aspect-ratio:${i % 3 === 1 ? '3/4' : '4/3'}">
+          <img class="photo-img w-full h-full object-cover" id="img-${p.id}" alt="${esc(p.caption || 'Foto del club')}" loading="lazy">
+        </div>
+        ${p.caption || p.event ? `
+        <div class="px-1 pt-2.5 space-y-1">
+          ${p.caption ? `<p class="font-display italic text-sm text-crema leading-tight">${esc(p.caption)}</p>` : ''}
+          ${p.event ? `<p class="text-xs text-marigold/80">📅 ${esc(p.event.title)} · ${fmtDate(p.event.event_at)}</p>` : ''}
+        </div>` : ''}
+      </div>`).join('');
+
+    // Lazy-load signed URLs as cards enter viewport
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(async entry => {
+        if (!entry.isIntersecting) return;
+        observer.unobserve(entry.target);
+        const id = entry.target.dataset.photoId;
+        if (!id) return;
+        try {
+          const { url } = await api(`/api/photos/${id}/url`);
+          const img = document.getElementById(`img-${id}`);
+          const wrap = document.getElementById(`wrap-${id}`);
+          if (!img) return;
+          img.onload = () => {
+            img.classList.add('loaded');
+            wrap?.classList.remove('shimmer');
+          };
+          img.src = url;
+        } catch { /* skip — don't break the rest */ }
+      });
+    }, { rootMargin: '250px 0px' });
+
+    document.querySelectorAll('.photo-card[data-photo-id]').forEach(card => observer.observe(card));
+
+  } catch (err) {
+    if (err.message !== '401') {
+      subtitle.textContent = '';
+      gallery.innerHTML = `<p class="col-span-full text-center py-8 text-orquidea">${esc(err.message)}</p>`;
+    }
+  }
+}
+
+load();
+</script>
+<script>
+(function(){
+  const btn  = document.getElementById('nav-hamburger');
+  const menu = document.getElementById('nav-mobile-menu');
+  if (!btn || !menu) return;
+  const iM = document.getElementById('icon-menu');
+  const iC = document.getElementById('icon-close');
+  function close() {
+    menu.classList.add('hidden');
+    btn.setAttribute('aria-expanded','false');
+    iM.classList.remove('hidden');
+    iC.classList.add('hidden');
+  }
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    const nowHidden = menu.classList.toggle('hidden');
+    btn.setAttribute('aria-expanded', String(!nowHidden));
+    iM.classList.toggle('hidden', !nowHidden);
+    iC.classList.toggle('hidden', nowHidden);
+  });
+  document.addEventListener('click', close);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+})();
+</script>
+</body>
+</html>
