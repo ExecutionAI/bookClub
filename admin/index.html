@@ -174,6 +174,32 @@ tailwind.config = {
   </div>
 </div>
 
+<!-- Edit event modal -->
+<div id="edit-modal" class="hidden fixed inset-0 z-[70] items-center justify-center p-4 bg-noche-deep/80 backdrop-blur-sm">
+  <div class="bg-noche-surface border border-noche-line rounded-2xl sombra p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+    <h3 class="font-display text-xl mb-5">Editar evento</h3>
+    <div class="space-y-3">
+      <input id="ee-title" placeholder="Título *" class="field">
+      <input id="ee-location" placeholder="Lugar" class="field">
+      <input id="ee-theme" placeholder="Temática del mes (ej. Realismo mágico)" class="field">
+      <textarea id="ee-description" placeholder="Descripción" class="field resize-none" rows="2"></textarea>
+      <label class="text-xs text-crema-dim block">¿Cómo se elige el libro?
+        <select id="ee-method" class="field mt-1">
+          <option value="raffle">Al azar — el cáliz 🔥</option>
+          <option value="vote">Por votación 🗳️</option>
+        </select>
+      </label>
+      <label class="text-xs text-crema-dim block">Fecha del encuentro *<input id="ee-date" type="datetime-local" class="field mt-1"></label>
+      <label id="ee-raffle-wrap" class="text-xs text-crema-dim block">Fecha de la rifa<input id="ee-raffle" type="datetime-local" class="field mt-1"></label>
+      <label id="ee-deadline-wrap" class="hidden text-xs text-crema-dim block">Cierre de la votación<input id="ee-deadline" type="datetime-local" class="field mt-1"></label>
+    </div>
+    <div class="flex gap-3 justify-end mt-5">
+      <button id="ee-cancel" class="btn btn-ghost">Cancelar</button>
+      <button id="ee-save" class="btn btn-primary">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div id="toast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[80] bg-crema text-noche font-bold text-sm px-5 py-3 rounded-xl shadow-xl"></div>
 
@@ -223,7 +249,73 @@ function closeConfirm(){
 }
 document.getElementById('cm-cancel').addEventListener('click', closeConfirm);
 document.getElementById('cm-ok').addEventListener('click', () => { const fn = pendingConfirm; closeConfirm(); if (fn) fn(); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeConfirm(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeConfirm(); closeEditModal(); } });
+
+// ── Edit event modal ──
+let editEventId = null;
+
+function isoToLocal(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function openEditEvent(id) {
+  const e = eventsById[id];
+  if (!e) return;
+  editEventId = id;
+  document.getElementById('ee-title').value = e.title || '';
+  document.getElementById('ee-location').value = e.location || '';
+  document.getElementById('ee-theme').value = e.theme || '';
+  document.getElementById('ee-description').value = e.description || '';
+  document.getElementById('ee-method').value = e.selection_method || 'raffle';
+  document.getElementById('ee-date').value = isoToLocal(e.event_at);
+  document.getElementById('ee-raffle').value = isoToLocal(e.raffle_at);
+  document.getElementById('ee-deadline').value = isoToLocal(e.vote_deadline);
+  const isVote = (e.selection_method === 'vote');
+  document.getElementById('ee-raffle-wrap').classList.toggle('hidden', isVote);
+  document.getElementById('ee-deadline-wrap').classList.toggle('hidden', !isVote);
+  const m = document.getElementById('edit-modal');
+  m.classList.remove('hidden'); m.classList.add('flex');
+}
+
+function closeEditModal() {
+  const m = document.getElementById('edit-modal');
+  m.classList.add('hidden'); m.classList.remove('flex');
+  editEventId = null;
+}
+
+document.getElementById('ee-cancel').addEventListener('click', closeEditModal);
+document.getElementById('ee-method').addEventListener('change', () => {
+  const isVote = document.getElementById('ee-method').value === 'vote';
+  document.getElementById('ee-raffle-wrap').classList.toggle('hidden', isVote);
+  document.getElementById('ee-deadline-wrap').classList.toggle('hidden', !isVote);
+});
+document.getElementById('ee-save').addEventListener('click', async () => {
+  if (!editEventId) return;
+  try {
+    const title = document.getElementById('ee-title').value.trim();
+    const event_at = document.getElementById('ee-date').value;
+    if (!title || !event_at) { toast('Título y fecha son obligatorios'); return; }
+    const method = document.getElementById('ee-method').value;
+    await api(`/api/admin/events/${editEventId}`, { method: 'PATCH', body: JSON.stringify({
+      title,
+      description: document.getElementById('ee-description').value.trim() || null,
+      location: document.getElementById('ee-location').value.trim() || null,
+      theme: document.getElementById('ee-theme').value.trim() || null,
+      selection_method: method,
+      event_at: new Date(event_at).toISOString(),
+      raffle_at: method === 'raffle' && document.getElementById('ee-raffle').value
+        ? new Date(document.getElementById('ee-raffle').value).toISOString() : null,
+      vote_deadline: method === 'vote' && document.getElementById('ee-deadline').value
+        ? new Date(document.getElementById('ee-deadline').value).toISOString() : null,
+    })});
+    toast('Evento actualizado 🗓️');
+    closeEditModal();
+    loadEvents();
+  } catch (err) { toast(err.message); }
+});
 
 // ── Gate ──
 function showGate(err){
@@ -257,6 +349,7 @@ document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () =>
 }));
 
 let members = [];
+const eventsById = {};
 
 function loadAll(){ loadEvents(); loadMembers(); loadBooks(); loadStats(); }
 
@@ -266,6 +359,7 @@ async function loadEvents(){
   try {
     const events = await api('/api/admin/events');
     const list = document.getElementById('events-list');
+    events.forEach(e => { eventsById[e.id] = e; });
     if (!events.length) { list.innerHTML = '<p class="text-crema-dim">No hay eventos todavía.</p>'; return; }
     const tag = e => {
       if (e.status === 'planned') return e.selection_method === 'vote'
@@ -299,6 +393,7 @@ async function loadEvents(){
             ${e.status === 'raffled' ? `<button class="btn btn-ghost act-reading" data-id="${e.id}">Marcar "leyendo"</button>
               <button class="btn btn-primary act-complete" data-id="${e.id}" data-name="${esc(e.title)}">Completar evento</button>` : ''}
             ${e.status !== 'completed' ? `<button class="btn btn-danger act-delete" data-id="${e.id}" data-name="${esc(e.title)}">Eliminar</button>` : ''}
+            <button class="btn btn-ghost act-edit" data-id="${e.id}">Editar evento</button>
           </div>
           ${e.status !== 'completed' ? `
           <div class="flex gap-2 items-center mb-4 flex-wrap">
@@ -380,6 +475,7 @@ async function loadEvents(){
         catch (e) { toast(e.message); }
       });
     }));
+    list.querySelectorAll('.act-edit').forEach(b => b.addEventListener('click', () => openEditEvent(b.dataset.id)));
     list.querySelectorAll('.act-attendance').forEach(b => b.addEventListener('click', async () => {
       const box = b.closest('[data-event]');
       const ids = [...box.querySelectorAll('.att-list input:checked')].map(i => i.value);
