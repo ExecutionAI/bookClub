@@ -49,6 +49,7 @@ tailwind.config = {
     break-inside: avoid;
     transition: transform .25s ease, box-shadow .25s ease, z-index 0s;
     position: relative;
+    cursor: pointer;
   }
   .photo-card:hover {
     transform: rotate(0deg) scale(1.04) !important;
@@ -83,6 +84,12 @@ tailwind.config = {
     transition: opacity .5s ease;
   }
   .photo-img.loaded { opacity: 1; }
+
+  /* Lightbox */
+  #lightbox { opacity: 0; transition: opacity .22s ease; }
+  #lightbox.lb-open { opacity: 1; }
+  #lb-content { transform: scale(.95) translateY(12px); transition: transform .28s ease; }
+  #lightbox.lb-open #lb-content { transform: scale(1) translateY(0); }
 
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none!important; transition:none!important; } }
 </style>
@@ -140,6 +147,24 @@ tailwind.config = {
 
 </main>
 
+<!-- Lightbox modal -->
+<div id="lightbox" role="dialog" aria-modal="true" aria-label="Foto ampliada"
+     class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8"
+     style="display:none;background:rgba(21,14,36,.93);backdrop-filter:blur(10px);">
+  <button id="lb-close" aria-label="Cerrar foto"
+    class="absolute top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 flex items-center justify-center rounded-full bg-noche-surface border border-noche-line text-crema-dim hover:text-crema hover:border-marigold/50 active:scale-95 transition-[transform,color,border-color]">
+    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+    </svg>
+  </button>
+  <div id="lb-content" class="flex flex-col items-center gap-5 w-full max-w-4xl">
+    <img id="lb-img" src="" alt=""
+         class="max-h-[72vh] w-auto max-w-full rounded-2xl object-contain"
+         style="box-shadow:0 2px 8px rgba(10,6,20,.8),0 28px 70px -12px rgba(10,6,20,.9),0 0 0 1px rgba(217,164,65,.2)">
+    <div id="lb-meta" class="text-center space-y-1.5 px-4"></div>
+  </div>
+</div>
+
 <script>
 const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
   ? 'http://localhost:3001' : 'https://entrebicisylibros.com';
@@ -169,6 +194,50 @@ const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov'
 function fmtDate(iso){ if (!iso) return ''; const d = new Date(iso); return `${d.getDate()} ${MESES[d.getMonth()]} ${d.getFullYear()}`; }
 
 const ROTS = ['-.7deg', '.5deg', '-1.2deg', '.8deg', '-1.5deg', '.4deg', '-.9deg', '1.1deg'];
+let photosData = [];
+const photoUrls = {};
+
+function openLightbox(id) {
+  const photo = photosData.find(p => String(p.id) === String(id));
+  const url = photoUrls[id];
+  if (!url) return;
+
+  const lb = document.getElementById('lightbox');
+  const img = document.getElementById('lb-img');
+  const meta = document.getElementById('lb-meta');
+
+  img.src = url;
+  img.alt = photo?.caption || 'Foto del club';
+  meta.innerHTML = [
+    photo?.caption ? `<p class="font-display italic text-lg text-crema leading-snug">${esc(photo.caption)}</p>` : '',
+    photo?.event ? `<p class="text-sm text-marigold/80">📅 ${esc(photo.event.title)} · ${fmtDate(photo.event.event_at)}</p>` : '',
+  ].filter(Boolean).join('');
+
+  lb.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  requestAnimationFrame(() => requestAnimationFrame(() => lb.classList.add('lb-open')));
+  document.getElementById('lb-close').focus();
+}
+
+function closeLightbox() {
+  const lb = document.getElementById('lightbox');
+  lb.classList.remove('lb-open');
+  document.body.style.overflow = '';
+  lb.addEventListener('transitionend', () => {
+    if (!lb.classList.contains('lb-open')) lb.style.display = 'none';
+  }, { once: true });
+}
+
+document.getElementById('lb-close').addEventListener('click', closeLightbox);
+document.getElementById('lightbox').addEventListener('click', e => {
+  if (e.target === document.getElementById('lightbox')) closeLightbox();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('lightbox').style.display !== 'none') {
+    e.stopPropagation();
+    closeLightbox();
+  }
+});
 
 async function load() {
   const gallery = document.getElementById('gallery');
@@ -187,6 +256,7 @@ async function load() {
 
   try {
     const photos = await api('/api/photos');
+    photosData = photos;
 
     if (!photos.length) {
       subtitle.textContent = 'El álbum está esperando su primera foto';
@@ -200,7 +270,8 @@ async function load() {
 
     gallery.innerHTML = photos.map((p, i) => `
       <div class="photo-card mb-5 bg-noche-surface border border-noche-line rounded-2xl p-2.5 pb-3 sombra"
-           style="transform: rotate(${ROTS[i % ROTS.length]})" data-photo-id="${p.id}">
+           style="transform: rotate(${ROTS[i % ROTS.length]})" data-photo-id="${p.id}"
+           tabindex="0" role="button" aria-label="Ver foto${p.caption ? ': ' + esc(p.caption) : ''}">
         <div class="rounded-xl overflow-hidden bg-noche-deep shimmer" id="wrap-${p.id}"
              style="aspect-ratio:${i % 3 === 1 ? '3/4' : '4/3'}">
           <img class="photo-img w-full h-full object-cover" id="img-${p.id}" alt="${esc(p.caption || 'Foto del club')}" loading="lazy">
@@ -224,6 +295,7 @@ async function load() {
           const img = document.getElementById(`img-${id}`);
           const wrap = document.getElementById(`wrap-${id}`);
           if (!img) return;
+          photoUrls[id] = url;
           img.onload = () => {
             img.classList.add('loaded');
             wrap?.classList.remove('shimmer');
@@ -234,6 +306,18 @@ async function load() {
     }, { rootMargin: '250px 0px' });
 
     document.querySelectorAll('.photo-card[data-photo-id]').forEach(card => observer.observe(card));
+
+    gallery.addEventListener('click', e => {
+      const card = e.target.closest('.photo-card[data-photo-id]');
+      if (card) openLightbox(card.dataset.photoId);
+    });
+    gallery.addEventListener('keydown', e => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const card = e.target.closest('.photo-card[data-photo-id]');
+      if (!card) return;
+      e.preventDefault();
+      openLightbox(card.dataset.photoId);
+    });
 
   } catch (err) {
     if (err.message !== '401') {
