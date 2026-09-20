@@ -165,7 +165,7 @@ class Query {
 }
 
 export function createMockClient() {
-  const db = { tables: { members: [], sessions: [], books: [], events: [], suggestions: [], ratings: [], attendance: [], votes: [], photos: [] } };
+  const db = { tables: { members: [], sessions: [], books: [], events: [], suggestions: [], ratings: [], attendance: [], votes: [], photos: [], event_materials: [] } };
   const files = new Map();
 
   seedDemo(db);
@@ -181,7 +181,9 @@ export function createMockClient() {
         upload: async (path, buffer) => { files.set(path, buffer); return { data: { path }, error: null }; },
         createSignedUrl: async (path) => {
           if (files.has(path)) {
-            const route = path.startsWith('photos/') ? 'mock-photo' : 'mock-pdf';
+            const route = path.startsWith('photos/') ? 'mock-photo'
+                        : path.startsWith('materials/') ? 'mock-material'
+                        : 'mock-pdf';
             return { data: { signedUrl: `/${route}/${encodeURIComponent(path)}` }, error: null };
           }
           // Demo photos that aren't in the files map get a placeholder image

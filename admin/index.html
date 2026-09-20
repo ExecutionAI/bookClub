@@ -220,6 +220,18 @@ tailwind.config = {
       <label id="ee-raffle-wrap" class="text-xs text-crema-dim block">Fecha de la rifa<input id="ee-raffle" type="datetime-local" class="field mt-1"></label>
       <label id="ee-deadline-wrap" class="hidden text-xs text-crema-dim block">Cierre de la votación<input id="ee-deadline" type="datetime-local" class="field mt-1"></label>
     </div>
+    <div id="ee-materials-section" class="hidden border-t border-noche-line pt-4 mt-2">
+      <h4 class="text-xs uppercase tracking-wider text-crema-dim mb-3">Materiales del evento</h4>
+      <div id="ee-materials-list" class="space-y-2 mb-4"></div>
+      <div class="space-y-2">
+        <input id="ee-mat-title" placeholder="Título del material (opcional)" class="field">
+        <label class="btn btn-ghost cursor-pointer w-full text-center block">
+          Subir material (PDF, EPUB, PPTX)
+          <input type="file" id="ee-mat-file" accept=".pdf,.epub,.pptx,application/pdf,application/epub+zip,application/vnd.openxmlformats-officedocument.presentationml.presentation" class="hidden">
+        </label>
+        <p id="ee-mat-status" class="text-xs text-crema-dim"></p>
+      </div>
+    </div>
     <div class="flex gap-3 justify-end mt-5">
       <button id="ee-cancel" class="btn btn-ghost">Cancelar</button>
       <button id="ee-save" class="btn btn-primary">Guardar cambios</button>
@@ -303,6 +315,10 @@ function openEditEvent(id) {
   const isVote = (e.selection_method === 'vote');
   document.getElementById('ee-raffle-wrap').classList.toggle('hidden', isVote);
   document.getElementById('ee-deadline-wrap').classList.toggle('hidden', !isVote);
+  document.getElementById('ee-materials-section').classList.remove('hidden');
+  document.getElementById('ee-mat-title').value = '';
+  document.getElementById('ee-mat-status').textContent = '';
+  loadEventMaterials(id);
   const m = document.getElementById('edit-modal');
   m.classList.remove('hidden'); m.classList.add('flex');
 }
@@ -310,8 +326,61 @@ function openEditEvent(id) {
 function closeEditModal() {
   const m = document.getElementById('edit-modal');
   m.classList.add('hidden'); m.classList.remove('flex');
+  document.getElementById('ee-materials-section').classList.add('hidden');
   editEventId = null;
 }
+
+async function loadEventMaterials(eventId) {
+  const list = document.getElementById('ee-materials-list');
+  list.innerHTML = '<p class="text-xs text-crema-dim">Cargando…</p>';
+  try {
+    const mats = await api(`/api/admin/events/${eventId}/materials`);
+    if (!mats.length) { list.innerHTML = '<p class="text-xs text-crema-dim italic">Sin materiales todavía.</p>'; return; }
+    const ICON = {
+      'application/pdf': '📄',
+      'application/epub+zip': '📖',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation': '📊',
+    };
+    list.innerHTML = mats.map(m => `
+      <div class="flex items-center gap-3 bg-noche-deep border border-noche-line rounded-xl px-3 py-2">
+        <span class="text-base shrink-0">${ICON[m.mime_type] || '📎'}</span>
+        <span class="flex-1 text-sm truncate">${esc(m.title)}</span>
+        <button class="btn btn-danger text-xs py-1 px-2 act-delmat" data-id="${esc(m.id)}" data-name="${esc(m.title)}">Eliminar</button>
+      </div>`).join('');
+    list.querySelectorAll('.act-delmat').forEach(b => b.addEventListener('click', () => {
+      confirmAction('¿Eliminar material?', `Se borrará "${b.dataset.name}" permanentemente.`, 'Eliminar', async () => {
+        try {
+          await api(`/api/admin/events/${eventId}/materials/${b.dataset.id}`, { method: 'DELETE' });
+          toast('Material eliminado');
+          loadEventMaterials(eventId);
+        } catch (e) { toast(e.message); }
+      });
+    }));
+  } catch (e) { list.innerHTML = `<p class="text-xs text-orquidea">${esc(e.message)}</p>`; }
+}
+
+document.getElementById('ee-mat-file').addEventListener('change', async () => {
+  const inp = document.getElementById('ee-mat-file');
+  const file = inp.files[0];
+  if (!file || !editEventId) return;
+  const status = document.getElementById('ee-mat-status');
+  const fd = new FormData();
+  fd.append('file', file);
+  const title = document.getElementById('ee-mat-title').value.trim();
+  if (title) fd.append('title', title);
+  status.textContent = 'Subiendo…';
+  try {
+    await api(`/api/admin/events/${editEventId}/materials`, { method: 'POST', body: fd });
+    inp.value = '';
+    document.getElementById('ee-mat-title').value = '';
+    status.textContent = '';
+    toast('Material subido 📄');
+    loadEventMaterials(editEventId);
+  } catch (e) {
+    status.textContent = e.message;
+    inp.value = '';
+  }
+});
 
 document.getElementById('ee-cancel').addEventListener('click', closeEditModal);
 document.getElementById('ee-method').addEventListener('change', () => {

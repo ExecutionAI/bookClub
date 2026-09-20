@@ -143,6 +143,7 @@ function render(){
   else if (ev.status === 'raffled') body = winnerSection('Este es el elegido — ¡a leer!');
   else if (ev.status === 'completed') body = winnerSection('El libro de este encuentro') + attendeesSection() + '<div id="event-photos-section" class="mt-6"></div>';
   else body = '<p class="text-crema-dim">Este evento fue cancelado.</p>';
+  if (ev.status !== 'cancelled') body += '<div id="event-materials-section" class="mt-6"></div>';
 
   c.innerHTML = `
     <a href="index.html" class="text-crema-dim text-sm hover:text-crema">← volver</a>
@@ -163,6 +164,7 @@ function render(){
 
   if (ev.status === 'planned') wireSuggestionForm();
   if (ev.status === 'completed') loadEventPhotos();
+  if (ev.status !== 'cancelled') loadEventMaterials();
 }
 
 // ── Planned: suggestion form + goblet status ─────────────────────────────────
@@ -378,6 +380,41 @@ function attendeesSection(){
           <span class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-noche-deep" style="background:${esc(a.avatar_color || '#d9a441')}">${esc(a.name[0])}</span>${esc(a.name)}</span>`).join('')}
       </div>
     </section>`;
+}
+
+async function loadEventMaterials(){
+  try {
+    const materials = await api(`/api/events/${eventId}/materials`);
+    const box = document.getElementById('event-materials-section');
+    if (!box || !materials.length) return;
+    const ICON = {
+      'application/pdf': '📄',
+      'application/epub+zip': '📖',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation': '📊',
+    };
+    const EXT_LABEL = {
+      'application/pdf': 'PDF',
+      'application/epub+zip': 'EPUB',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'PPTX',
+    };
+    box.innerHTML = `
+      <section class="bg-noche-surface border border-noche-line rounded-2xl sombra p-6 sm:p-8">
+        <h2 class="font-display text-2xl mb-4">Materiales del evento</h2>
+        <ul class="space-y-3">
+          ${materials.map(m => `
+            <li class="flex items-center gap-4 bg-noche-deep border border-noche-line rounded-xl px-4 py-3">
+              <span class="text-2xl shrink-0" aria-hidden="true">${ICON[m.mime_type] || '📎'}</span>
+              <div class="flex-1 min-w-0">
+                <p class="font-semibold truncate">${esc(m.title)}</p>
+                <p class="text-xs text-crema-dim uppercase tracking-wide">${EXT_LABEL[m.mime_type] || 'archivo'}</p>
+              </div>
+              ${m.url
+                ? `<a href="${esc(m.url)}" download class="btn btn-ghost text-sm shrink-0 px-4 py-2">Descargar</a>`
+                : '<span class="text-xs text-crema-dim">no disponible</span>'}
+            </li>`).join('')}
+        </ul>
+      </section>`;
+  } catch { /* materials are optional, fail silently */ }
 }
 
 async function loadEventPhotos(){

@@ -185,3 +185,16 @@ CREATE TABLE IF NOT EXISTS bookclub.photos (
 );
 ALTER TABLE bookclub.photos ENABLE ROW LEVEL SECURITY;
 GRANT ALL ON bookclub.photos TO service_role;
+
+-- 13. Event materials — downloadable files attached to events (PDFs, EPUBs, presentations).
+-- Stored in bookclub-pdfs bucket at path materials/{eventId}/{uuid}.{ext}
+CREATE TABLE IF NOT EXISTS bookclub.event_materials (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id    uuid NOT NULL REFERENCES bookclub.events(id) ON DELETE CASCADE,
+  title       text NOT NULL,
+  path        text NOT NULL,
+  mime_type   text NOT NULL,
+  uploaded_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE bookclub.event_materials ENABLE ROW LEVEL SECURITY;
+GRANT ALL ON bookclub.event_materials TO service_role;

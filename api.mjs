@@ -56,6 +56,15 @@ if (useMock) {
     res.set('Content-Type', ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg');
     res.send(buffer);
   });
+  app.get('/mock-material/:path(*)', (req, res) => {
+    const decodedPath = decodeURIComponent(req.params.path);
+    const buffer = supabase.storage._files.get(decodedPath);
+    if (!buffer) return res.status(404).json({ error: 'Not found' });
+    const mat = supabase._db.tables.event_materials.find(m => m.path === decodedPath);
+    res.set('Content-Type', mat?.mime_type || 'application/octet-stream');
+    res.set('Content-Disposition', `attachment; filename="${decodedPath.split('/').pop()}"`);
+    res.send(buffer);
+  });
 }
 
 // ── Auth middleware ───────────────────────────────────────────────────────────
@@ -1141,6 +1150,11 @@ app.post('/api/admin/books/:id/pdf', requireAdmin, upload.single('file'), async 
 // ── Photos ────────────────────────────────────────────────────────────────────
 
 const PHOTO_ALLOWED = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
+const MATERIAL_ALLOWED = {
+  'application/pdf': 'pdf',
+  'application/epub+zip': 'epub',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
+};
 
 // Upload photo — multipart field "file"; form fields: event_id?, caption?
 app.post('/api/admin/photos', requireAdmin, upload.single('file'), async (req, res) => {
@@ -1240,6 +1254,79 @@ app.delete('/api/admin/photos/:id', requireAdmin, async (req, res) => {
     if (!photo) return res.status(404).json({ error: 'Photo not found' });
     await supabase.storage.from(PDF_BUCKET).remove([photo.path]);
     const { error } = await supabase.from('photos').delete().eq('id', req.params.id);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Event materials ───────────────────────────────────────────────────────────
+
+app.post('/api/admin/events/:id/materials', requireAdmin, upload.single('file'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'file is required' });
+  const ext = MATERIAL_ALLOWED[req.file.mimetype];
+  if (!ext) return res.status(400).json({ error: 'Tipo no permitido. Usa PDF, EPUB o PPTX.' });
+  try {
+    const { data: event } = await supabase.from('events').select('id').eq('id', req.params.id).single();
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+    const id = crypto.randomUUID();
+    const path = `materials/${req.params.id}/${id}.${ext}`;
+    const rawTitle = req.body.title?.trim();
+    const title = rawTitle || (req.file.originalname?.replace(/\.[^.]+$/, '') || 'Material');
+    const { error: upErr } = await supabase.storage.from(PDF_BUCKET).upload(path, req.file.buffer, {
+      contentType: req.file.mimetype, upsert: false,
+    });
+    if (upErr) throw upErr;
+    const { data, error } = await supabase.from('event_materials').insert({
+      id, event_id: req.params.id, title, path, mime_type: req.file.mimetype,
+      uploaded_at: new Date().toISOString(),
+    }).select().single();
+    if (error) {
+      await supabase.storage.from(PDF_BUCKET).remove([path]);
+      throw error;
+    }
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/admin/events/:id/materials', requireAdmin, async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('event_materials').select('*')
+      .eq('event_id', req.params.id).order('uploaded_at', { ascending: true });
+    if (error) throw error;
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/events/:id/materials', requireMember, async (req, res) => {
+  try {
+    const { data: materials, error } = await supabase.from('event_materials').select('*')
+      .eq('event_id', req.params.id).order('uploaded_at', { ascending: true });
+    if (error) throw error;
+    const withUrls = await Promise.all((materials || []).map(async m => {
+      const ext = m.path.endsWith('.pptx') ? 'pptx' : m.path.endsWith('.epub') ? 'epub' : 'pdf';
+      const { data: signed } = await supabase.storage.from(PDF_BUCKET)
+        .createSignedUrl(m.path, 3600, { download: `${m.title}.${ext}` });
+      return { ...m, url: signed?.signedUrl || null };
+    }));
+    res.json(withUrls);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/admin/events/:id/materials/:materialId', requireAdmin, async (req, res) => {
+  try {
+    const { data: mat } = await supabase.from('event_materials').select('path')
+      .eq('id', req.params.materialId).eq('event_id', req.params.id).single();
+    if (!mat) return res.status(404).json({ error: 'Material not found' });
+    await supabase.storage.from(PDF_BUCKET).remove([mat.path]);
+    const { error } = await supabase.from('event_materials').delete().eq('id', req.params.materialId);
     if (error) throw error;
     res.json({ success: true });
   } catch (err) {
