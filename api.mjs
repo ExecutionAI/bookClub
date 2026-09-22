@@ -337,11 +337,15 @@ app.get('/api/events/:id', requireMember, async (req, res) => {
       my_suggestions = mine.map(s => ({ suggestion_id: s.id, ...booksById[s.book_id] }));
     }
 
-    // Locked: vote events lock suggestions once any vote is cast
+    // Locked: vote events lock suggestions once suggestions_deadline passes (fallback: once any vote exists)
     let locked = false;
     if (event.status === 'planned' && event.selection_method === 'vote') {
-      const { data: voteCheck } = await supabase.from('votes').select('id').eq('event_id', event.id);
-      locked = !!(voteCheck?.length);
+      if (event.suggestions_deadline) {
+        locked = new Date(event.suggestions_deadline) < new Date();
+      } else {
+        const { data: voteCheck } = await supabase.from('votes').select('id').eq('event_id', event.id);
+        locked = !!(voteCheck?.length);
+      }
     }
 
     // Attendees (names) — only for completed events
@@ -416,9 +420,15 @@ app.post('/api/events/:id/suggestion', requireMember, async (req, res) => {
       return res.status(400).json({ error: 'La elección ya se celebró — no se pueden añadir propuestas' });
     }
     if (event.selection_method === 'vote') {
-      const { data: existingVotes } = await supabase.from('votes').select('id').eq('event_id', event.id);
-      if (existingVotes?.length) {
-        return res.status(400).json({ error: 'Ya hay votos — las propuestas están bloqueadas' });
+      if (event.suggestions_deadline && new Date(event.suggestions_deadline) < new Date()) {
+        return res.status(400).json({ error: 'El plazo de propuestas ya cerró' });
+      }
+      if (!event.suggestions_deadline) {
+        // legacy fallback: lock once any vote exists
+        const { data: existingVotes } = await supabase.from('votes').select('id').eq('event_id', event.id);
+        if (existingVotes?.length) {
+          return res.status(400).json({ error: 'Ya hay votos — las propuestas están bloqueadas' });
+        }
       }
     }
 
@@ -585,6 +595,8 @@ app.get('/api/events/:id/votes', requireMember, async (req, res) => {
       event_title: event.title,
       theme: event.theme || null,
       round: event.vote_round || 1,
+      suggestions_deadline: event.suggestions_deadline || null,
+      voting_open: !event.suggestions_deadline || new Date(event.suggestions_deadline) <= new Date(),
       vote_deadline: event.vote_deadline || null,
       deadline_passed: !!(event.vote_deadline && new Date(event.vote_deadline) < new Date()),
       candidates: candidatePayload,
@@ -609,6 +621,9 @@ app.put('/api/events/:id/vote', requireMember, async (req, res) => {
     if (!event) return res.status(404).json({ error: 'Evento no encontrado' });
     if (event.selection_method !== 'vote') return res.status(400).json({ error: 'Este evento se decide por rifa' });
     if (event.drawn_at) return res.status(400).json({ error: 'La votación ya terminó' });
+    if (event.suggestions_deadline && new Date(event.suggestions_deadline) > new Date()) {
+      return res.status(400).json({ error: 'La votación aún no ha abierto' });
+    }
     if (event.vote_deadline && new Date(event.vote_deadline) < new Date()) {
       return res.status(400).json({ error: 'La votación cerró' });
     }
@@ -860,7 +875,7 @@ app.get('/api/admin/events', requireAdmin, async (req, res) => {
 });
 
 app.post('/api/admin/events', requireAdmin, async (req, res) => {
-  const { title, description, location, event_at, raffle_at, selection_method, theme, vote_deadline } = req.body;
+  const { title, description, location, event_at, raffle_at, selection_method, theme, suggestions_deadline, vote_deadline } = req.body;
   if (!title?.trim() || !event_at) return res.status(400).json({ error: 'title and event_at are required' });
   if (selection_method !== undefined && !['raffle', 'vote'].includes(selection_method)) {
     return res.status(400).json({ error: "selection_method must be 'raffle' or 'vote'" });
@@ -877,6 +892,7 @@ app.post('/api/admin/events', requireAdmin, async (req, res) => {
       status: 'planned', // explicit — mockdb doesn't apply SQL column defaults
       selection_method: selection_method || 'raffle',
       theme: theme || null,
+      suggestions_deadline: suggestions_deadline || null,
       vote_deadline: vote_deadline || null,
       vote_round: 1,
       runoff_candidate_ids: null,
@@ -888,7 +904,7 @@ app.post('/api/admin/events', requireAdmin, async (req, res) => {
 });
 
 app.patch('/api/admin/events/:id', requireAdmin, async (req, res) => {
-  const { title, description, location, event_at, raffle_at, status, selection_method, theme, vote_deadline } = req.body;
+  const { title, description, location, event_at, raffle_at, status, selection_method, theme, suggestions_deadline, vote_deadline } = req.body;
 
   if (status || selection_method !== undefined) {
     const { data: current } = await supabase.from('events').select('status, drawn_at').eq('id', req.params.id).single();
@@ -916,6 +932,7 @@ app.patch('/api/admin/events/:id', requireAdmin, async (req, res) => {
   if (status !== undefined) updates.status = status;
   if (selection_method !== undefined) updates.selection_method = selection_method;
   if (theme !== undefined) updates.theme = theme || null;
+  if (suggestions_deadline !== undefined) updates.suggestions_deadline = suggestions_deadline || null;
   if (vote_deadline !== undefined) updates.vote_deadline = vote_deadline || null;
 
   const { data, error } = await supabase.from('events').update(updates).eq('id', req.params.id).select().single();

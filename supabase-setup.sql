@@ -57,6 +57,7 @@ CREATE TABLE IF NOT EXISTS bookclub.events (
   selection_method      text NOT NULL DEFAULT 'raffle'
                         CHECK (selection_method IN ('raffle','vote')),
   theme                 text,          -- temática del mes (admin-set)
+  suggestions_deadline  timestamptz,   -- locks new suggestions and opens voting (vote events)
   vote_deadline         timestamptz,   -- blocks member votes after this (vote events)
   vote_round            int NOT NULL DEFAULT 1,
   runoff_candidate_ids  uuid[],        -- current round's allowed suggestions; NULL = all
@@ -69,11 +70,12 @@ CREATE TABLE IF NOT EXISTS bookclub.events (
 -- 5b. Idempotent ALTERs for existing databases (new columns above)
 ALTER TABLE bookclub.events ADD COLUMN IF NOT EXISTS selection_method text NOT NULL DEFAULT 'raffle';
 ALTER TABLE bookclub.events ADD COLUMN IF NOT EXISTS theme text;
+ALTER TABLE bookclub.events ADD COLUMN IF NOT EXISTS suggestions_deadline timestamptz;
 ALTER TABLE bookclub.events ADD COLUMN IF NOT EXISTS vote_deadline timestamptz;
 ALTER TABLE bookclub.events ADD COLUMN IF NOT EXISTS vote_round int NOT NULL DEFAULT 1;
 ALTER TABLE bookclub.events ADD COLUMN IF NOT EXISTS runoff_candidate_ids uuid[];
 
--- 6. Suggestions — multiple per member per event, locked once drawn or once votes exist
+-- 6. Suggestions — multiple per member per event, locked once suggestions_deadline passes
 CREATE TABLE IF NOT EXISTS bookclub.suggestions (
   id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   event_id   uuid NOT NULL REFERENCES bookclub.events(id) ON DELETE CASCADE,

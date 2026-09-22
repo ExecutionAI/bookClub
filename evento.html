@@ -155,7 +155,8 @@ function render(){
         <p>📍 ${mapLink}</p>
         ${ev.theme ? `<p>🎭 Temática: <span class="text-orquidea font-semibold">${esc(ev.theme)}</span></p>` : ''}
         ${ev.status === 'planned' ? (ev.selection_method === 'vote'
-          ? `<p class="text-caliz">🗳️ ${ev.vote_deadline ? `Votación abierta hasta el ${fmtFull(ev.vote_deadline)}` : 'El libro se elige por votación'}</p>`
+          ? `${ev.suggestions_deadline ? `<p class="text-crema-dim">📝 Propuestas hasta el ${fmtFull(ev.suggestions_deadline)}</p>` : ''}
+             ${ev.vote_deadline ? `<p class="text-caliz">🗳️ Votación del ${ev.suggestions_deadline ? fmtFull(ev.suggestions_deadline) : '?'} al ${fmtFull(ev.vote_deadline)}</p>` : '<p class="text-caliz">🗳️ El libro se elige por votación</p>'}`
           : (ev.raffle_at ? `<p class="text-caliz">🔮 Rifa: ${fmtFull(ev.raffle_at)}</p>` : '')) : ''}
       </div>
       ${ev.description ? `<p class="mt-4 text-crema-dim leading-relaxed">${esc(ev.description)}</p>` : ''}
@@ -268,7 +269,7 @@ function plannedSection(){
       ${ev.locked ? `
         <div class="flex items-center gap-3 text-sm text-orquidea bg-orquidea/10 border border-orquidea/30 rounded-xl px-4 py-3 mb-6">
           <svg class="w-4 h-4 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5 7V5a3 3 0 0 1 6 0v2" stroke-linecap="round"/></svg>
-          Las propuestas están bloqueadas — la votación ya comenzó.
+          ${ev.suggestions_deadline ? `El plazo de propuestas cerró el ${fmtFull(ev.suggestions_deadline)} — la votación ya está abierta.` : 'Las propuestas están bloqueadas — la votación ya comenzó.'}
         </div>
         ${(ev.my_suggestions || []).length ? `
           <h2 class="font-display text-2xl mb-1">Tus propuestas</h2>
@@ -283,9 +284,14 @@ function plannedSection(){
                 <span class="text-marigold text-lg shrink-0">✓</span>
               </li>`).join('')}
           </ul>` : ''}` : `
+        ${isVote && ev.suggestions_deadline && !ev.locked ? `
+        <div class="flex items-center gap-3 text-sm text-caliz bg-caliz/10 border border-caliz/30 rounded-xl px-4 py-3 mb-6">
+          <svg class="w-4 h-4 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="8" r="6"/><path d="M8 5v3.5l2 1.5" stroke-linecap="round"/></svg>
+          La votación abre el ${fmtFull(ev.suggestions_deadline)} — hasta entonces puedes proponer libros.
+        </div>` : ''}
         ${(ev.my_suggestions || []).length ? `
           <h2 class="font-display text-2xl mb-1">Tus propuestas</h2>
-          <p class="text-crema-dim text-sm mb-4">${isVote ? 'Puedes quitar o añadir más hasta que haya votos.' : 'Puedes quitar o añadir más hasta la rifa.'}</p>
+          <p class="text-crema-dim text-sm mb-4">${isVote && ev.suggestions_deadline ? `Puedes quitar o añadir más hasta el ${fmtFull(ev.suggestions_deadline)}.` : isVote ? 'Puedes quitar o añadir más hasta que Paola abra la votación.' : 'Puedes quitar o añadir más hasta la rifa.'}</p>
           <ul id="my-sug-list" class="space-y-3 mb-7">
             ${(ev.my_suggestions || []).map((s, i) => `
               <li class="sug-item flex items-center gap-4 bg-noche-deep rounded-xl p-4" style="animation-delay:${i * 60}ms" data-sug-id="${esc(s.suggestion_id)}">

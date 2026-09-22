@@ -105,6 +105,7 @@ tailwind.config = {
         </label>
         <label class="text-xs text-crema-dim">Fecha del encuentro *<input id="e-date" type="datetime-local" class="field mt-1"></label>
         <label id="e-raffle-wrap" class="text-xs text-crema-dim">Fecha de la rifa<input id="e-raffle" type="datetime-local" class="field mt-1"></label>
+        <label id="e-sug-deadline-wrap" class="hidden text-xs text-crema-dim">Cierre de propuestas<input id="e-sug-deadline" type="datetime-local" class="field mt-1"></label>
         <label id="e-deadline-wrap" class="hidden text-xs text-crema-dim">Cierre de la votación<input id="e-deadline" type="datetime-local" class="field mt-1"></label>
       </div>
       <div class="mt-4 flex items-center gap-3">
@@ -218,6 +219,7 @@ tailwind.config = {
       </label>
       <label class="text-xs text-crema-dim block">Fecha del encuentro *<input id="ee-date" type="datetime-local" class="field mt-1"></label>
       <label id="ee-raffle-wrap" class="text-xs text-crema-dim block">Fecha de la rifa<input id="ee-raffle" type="datetime-local" class="field mt-1"></label>
+      <label id="ee-sug-deadline-wrap" class="hidden text-xs text-crema-dim block">Cierre de propuestas<input id="ee-sug-deadline" type="datetime-local" class="field mt-1"></label>
       <label id="ee-deadline-wrap" class="hidden text-xs text-crema-dim block">Cierre de la votación<input id="ee-deadline" type="datetime-local" class="field mt-1"></label>
     </div>
     <div id="ee-materials-section" class="hidden border-t border-noche-line pt-4 mt-2">
@@ -311,9 +313,11 @@ function openEditEvent(id) {
   document.getElementById('ee-method').value = e.selection_method || 'raffle';
   document.getElementById('ee-date').value = isoToLocal(e.event_at);
   document.getElementById('ee-raffle').value = isoToLocal(e.raffle_at);
+  document.getElementById('ee-sug-deadline').value = isoToLocal(e.suggestions_deadline);
   document.getElementById('ee-deadline').value = isoToLocal(e.vote_deadline);
   const isVote = (e.selection_method === 'vote');
   document.getElementById('ee-raffle-wrap').classList.toggle('hidden', isVote);
+  document.getElementById('ee-sug-deadline-wrap').classList.toggle('hidden', !isVote);
   document.getElementById('ee-deadline-wrap').classList.toggle('hidden', !isVote);
   document.getElementById('ee-materials-section').classList.remove('hidden');
   document.getElementById('ee-mat-title').value = '';
@@ -386,6 +390,7 @@ document.getElementById('ee-cancel').addEventListener('click', closeEditModal);
 document.getElementById('ee-method').addEventListener('change', () => {
   const isVote = document.getElementById('ee-method').value === 'vote';
   document.getElementById('ee-raffle-wrap').classList.toggle('hidden', isVote);
+  document.getElementById('ee-sug-deadline-wrap').classList.toggle('hidden', !isVote);
   document.getElementById('ee-deadline-wrap').classList.toggle('hidden', !isVote);
 });
 document.getElementById('ee-save').addEventListener('click', async () => {
@@ -404,6 +409,8 @@ document.getElementById('ee-save').addEventListener('click', async () => {
       event_at: new Date(event_at).toISOString(),
       raffle_at: method === 'raffle' && document.getElementById('ee-raffle').value
         ? new Date(document.getElementById('ee-raffle').value).toISOString() : null,
+      suggestions_deadline: method === 'vote' && document.getElementById('ee-sug-deadline').value
+        ? new Date(document.getElementById('ee-sug-deadline').value).toISOString() : null,
       vote_deadline: method === 'vote' && document.getElementById('ee-deadline').value
         ? new Date(document.getElementById('ee-deadline').value).toISOString() : null,
     })});
@@ -459,7 +466,9 @@ async function loadEvents(){
     if (!events.length) { list.innerHTML = '<p class="text-crema-dim">No hay eventos todavía.</p>'; return; }
     const tag = e => {
       if (e.status === 'planned') return e.selection_method === 'vote'
-        ? '<span class="text-xs px-2.5 py-1 rounded-full bg-orquidea/15 text-orquidea">votación abierta</span>'
+        ? (e.suggestions_deadline && new Date(e.suggestions_deadline) > new Date()
+          ? '<span class="text-xs px-2.5 py-1 rounded-full bg-marigold/15 text-marigold">propuestas abiertas</span>'
+          : '<span class="text-xs px-2.5 py-1 rounded-full bg-orquidea/15 text-orquidea">votación abierta</span>')
         : '<span class="text-xs px-2.5 py-1 rounded-full bg-marigold/15 text-marigold">propuestas abiertas</span>';
       if (e.status === 'raffled') return e.selection_method === 'vote'
         ? '<span class="text-xs px-2.5 py-1 rounded-full bg-caliz/15 text-caliz">decidido</span>'
@@ -586,6 +595,7 @@ async function loadEvents(){
 document.getElementById('e-method').addEventListener('change', () => {
   const isVote = document.getElementById('e-method').value === 'vote';
   document.getElementById('e-raffle-wrap').classList.toggle('hidden', isVote);
+  document.getElementById('e-sug-deadline-wrap').classList.toggle('hidden', !isVote);
   document.getElementById('e-deadline-wrap').classList.toggle('hidden', !isVote);
 });
 
@@ -602,9 +612,10 @@ document.getElementById('e-create').addEventListener('click', async () => {
       selection_method: method,
       event_at: new Date(event_at).toISOString(),
       raffle_at: method === 'raffle' && document.getElementById('e-raffle').value ? new Date(document.getElementById('e-raffle').value).toISOString() : null,
+      suggestions_deadline: method === 'vote' && document.getElementById('e-sug-deadline').value ? new Date(document.getElementById('e-sug-deadline').value).toISOString() : null,
       vote_deadline: method === 'vote' && document.getElementById('e-deadline').value ? new Date(document.getElementById('e-deadline').value).toISOString() : null,
     })});
-    ['e-title','e-location','e-theme','e-date','e-raffle','e-deadline'].forEach(id => document.getElementById(id).value = '');
+    ['e-title','e-location','e-theme','e-date','e-raffle','e-sug-deadline','e-deadline'].forEach(id => document.getElementById(id).value = '');
     s.textContent = ''; toast('Evento creado 🗓️'); loadEvents();
   } catch (e) { s.textContent = e.message; }
 });

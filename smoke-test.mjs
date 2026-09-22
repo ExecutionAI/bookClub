@@ -35,7 +35,7 @@ check('me: stats present', me.stats?.events_attended === 6, `got ${JSON.stringif
 // ── Events ──
 const events = await fetch(`${BASE}/api/events`, { headers: H }).then(j);
 check('events: upcoming ≥ 2', events.upcoming?.length >= 2, `got ${events.upcoming?.length}`);
-check('events: past = 6', events.past?.length === 6, `got ${events.past?.length}`);
+check('events: past = 7', events.past?.length === 7, `got ${events.past?.length}`);
 const nextEvent = events.upcoming.find(e => e.status === 'planned');
 check('planned upcoming event exists', !!nextEvent);
 
@@ -149,6 +149,9 @@ check('vote on raffle event → 400', voteOnRaffle.status === 400);
 const drawOnVote = await fetch(`${BASE}/api/admin/events/${voteEvent.id}/draw`, { method: 'POST', headers: ADMIN });
 check('draw on vote event → 400', drawOnVote.status === 400);
 
+// Open voting by setting suggestions_deadline to past
+await fetch(`${BASE}/api/admin/events/${voteEvent.id}`, { method: 'PATCH', headers: ADMIN, body: JSON.stringify({ suggestions_deadline: '2026-01-01T00:00:00Z' }) });
+
 // ── Happy path: multi-vote (A and B), toggle off B ──
 const v1 = await fetch(`${BASE}/api/events/${voteEvent.id}/vote`, { method: 'PUT', headers: H, body: JSON.stringify({ suggestion_id: candB.suggestion_id }) }).then(j);
 check('Paola votes B', v1.success === true && v1.voted === true, JSON.stringify(v1));
@@ -165,9 +168,9 @@ const poll2b = await fetch(`${BASE}/api/events/${voteEvent.id}/votes`, { headers
 const poll2bB = poll2b.candidates.find(c => c.suggestion_id === candB.suggestion_id);
 check('toggle off: total back to 2, B=0', poll2b.total_votes === 2 && poll2bB.votes === 0, `total ${poll2b.total_votes}, B ${poll2bB?.votes}`);
 
-// ── Suggestion lock once votes exist ──
+// ── Suggestion lock: suggestions_deadline passed ──
 const lockedSug = await fetch(`${BASE}/api/events/${voteEvent.id}/suggestion`, { method: 'POST', headers: H, body: JSON.stringify({ title: 'Propuesta tardía' }) });
-check('suggestion locked once votes exist → 400', lockedSug.status === 400);
+check('suggestion locked after suggestions_deadline → 400', lockedSug.status === 400);
 
 // ── Deadline blocks members (not admin) ──
 await fetch(`${BASE}/api/admin/events/${voteEvent.id}`, { method: 'PATCH', headers: ADMIN, body: JSON.stringify({ vote_deadline: '2026-01-01T00:00:00Z' }) });

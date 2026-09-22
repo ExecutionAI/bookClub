@@ -201,6 +201,8 @@ function render(data){
   state = 'open';
 
   const closed = data.deadline_passed;
+  const notOpen = !data.voting_open;
+  const voteDisabled = closed || notOpen;
   const myVoteSet = new Set(data.my_votes || []);
   const maxVotes = Math.max(1, ...data.candidates.map(c => c.votes));
   document.getElementById('candidates').innerHTML = data.candidates.map(c => {
@@ -227,8 +229,8 @@ function render(data){
           </div>
           <button class="vote-btn shrink-0 px-4 py-2 rounded-xl text-sm font-bold active:scale-[.97] ${mine
             ? 'bg-marigold text-noche-deep'
-            : 'border border-marigold/40 text-marigold hover:bg-marigold/10'} ${closed ? 'opacity-40 pointer-events-none' : ''}"
-            data-id="${c.suggestion_id}" ${closed ? 'disabled' : ''}>${mine ? 'Votado ✓' : 'Votar'}</button>
+            : 'border border-marigold/40 text-marigold hover:bg-marigold/10'} ${voteDisabled ? 'opacity-40 pointer-events-none' : ''}"
+            data-id="${c.suggestion_id}" ${voteDisabled ? 'disabled' : ''}>${mine ? 'Votado ✓' : 'Votar'}</button>
         </div>
         <div class="mt-3 flex items-center gap-3">
           <div class="tally-track flex-1"><div class="tally-fill" style="transform:scaleX(${c.votes / maxVotes})"></div></div>
@@ -262,6 +264,21 @@ function updateCountdown(data){
   clearInterval(countdownTimer);
   const el = document.getElementById('countdown');
   if (data.state === 'decided') { el.textContent = 'la votación ya terminó'; return; }
+
+  // Voting not yet open — countdown to suggestions_deadline
+  if (!data.voting_open && data.suggestions_deadline) {
+    const opens = new Date(data.suggestions_deadline);
+    const tick = () => {
+      const ms = opens - Date.now();
+      if (ms <= 0) { el.textContent = 'propuestas cerradas — la votación acaba de abrir'; clearInterval(countdownTimer); return; }
+      const d = Math.floor(ms / 86400000), h = Math.floor(ms % 86400000 / 3600000), m = Math.floor(ms % 3600000 / 60000);
+      el.textContent = `propuestas abiertas hasta el ${fmtFull(opens.toISOString())} — ${d ? `${d}d ` : ''}${h}h ${m}m`;
+    };
+    tick();
+    countdownTimer = setInterval(tick, 30000);
+    return;
+  }
+
   if (!deadline) { el.textContent = 'abierta hasta que Paola cierre la votación'; return; }
 
   const tick = () => {

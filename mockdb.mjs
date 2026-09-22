@@ -246,7 +246,7 @@ function seedDemo(db) {
 
   const E = (title, location, event_at, raffle_at, status, winning_book_id, drawn_at) => ({
     id: uuid(), title, description: null, location, event_at, raffle_at, status,
-    selection_method: 'raffle', theme: null, vote_deadline: null, vote_round: 1, runoff_candidate_ids: null,
+    selection_method: 'raffle', theme: null, suggestions_deadline: null, vote_deadline: null, vote_round: 1, runoff_candidate_ids: null,
     winning_book_id: winning_book_id || null, winning_suggestion_id: null, drawn_at: drawn_at || null,
     created_at: new Date().toISOString(),
   });
@@ -270,6 +270,7 @@ function seedDemo(db) {
   const nov = E('Encuentro de Noviembre', 'Casa de Luz, Jordaan', '2026-11-21T19:00:00Z', null, 'planned', null);
   nov.selection_method = 'vote';
   nov.theme = 'Mujeres que escriben';
+  nov.suggestions_deadline = '2026-10-31T20:00:00Z';
   nov.vote_deadline = '2026-11-07T20:00:00Z';
   db.tables.events = [...evts, current, next, nov];
 
